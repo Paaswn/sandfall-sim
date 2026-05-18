@@ -67,7 +67,7 @@ explosion :: proc(world: ^World, ee: Explosion_Event) {
 			if dist_sq > 0 && dist_sq <= ee.r * ee.r / 4 {
 				i := idx(x, y)
 				if world.grid[i] != .Empty {
-				    world.grid[i] = .Empty
+					world.grid[i] = .Empty
 				}
 			}
 		}
@@ -90,27 +90,33 @@ circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
 		}
 	}
 }
-
+// either 0, 1 or -1
+get_direction :: proc(vel: f32) -> int {
+	if vel > 0 do return 1
+	else if vel < 0 do return -1
+	return 0
+}
 update_row :: proc(world: ^World, x, y: int) {
+	// init local var
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
 	now := idx(x, y)
+
+	// clear vel for empty cell
 	if grid[now] == .Empty {
 		vy[now] = 0
 		vx[now] = 0
 		return
 	}
+
+	// consume vel and update pos
 	vy[now] += GRAVITY * f32(DT)
 	step_y := clamp(int(vy[now]), 0, MAX_SAND_STEP)
-	dir_y := 0
-	if vy[now] > 0 {
-		dir_y = 1
-	} else if vy[now] < 0 {
-		dir_y = -1
-	}
+
+	dir_y := get_direction(vy[now])
 	target_y := y
-	for s in 1 ..= step_y { 	// loop through possible step to check
+	for s in 1 ..= step_y {
 		next_y := y + s * dir_y
 		if is_outside(x, next_y) {
 			vy[now] = 0
@@ -119,48 +125,24 @@ update_row :: proc(world: ^World, x, y: int) {
 
 		if grid[idx(x, next_y)] == .Empty {
 			target_y = next_y
-		} else { 	// if below isn't Empty just break and set the current velocity to 0
+		} else {
 			vy[now] = 0
 			break
 		}
 	}
 	if target_y != y && dir_y != 0 {
 		to := idx(x, target_y)
-		grid[to] = grid[now] // move material to target
-		vy[to] = vy[now] // move velocity to target
+		grid[to] = grid[now]
+		vy[to] = vy[now]
 		vx[to] = vx[now]
 
 		grid[now] = .Empty
-		vy[now] = 0 // clear old velocity
+		vy[now] = 0
 		vx[now] = 0
 		return
 	}
 
-	if abs(vx[now]) >= 1.0 {
-		side := 1
-		if vx[now] < 0 {
-			side = -1
-		}
-
-		target_x := x + side
-		target_y := y
-		if !is_outside(target_x, target_y) {
-			to := idx(target_x, target_y)
-
-			if grid[to] == .Empty {
-				grid[to] = grid[now]
-				vx[to] = vx[now] * SIDE_FRICTION
-				vy[to] = vy[now]
-
-				grid[now] = .Empty
-				vx[now] = 0
-				vy[now] = 0
-				return
-			} else {
-				vx[now] *= 0.4
-			}
-		}
-	}
+	// handle sliding
 	{
 		side := rand.choice([]int{-1, 1})
 		for attempt in 1 ..= 2 {
