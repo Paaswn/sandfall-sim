@@ -4,8 +4,8 @@ import rl "vendor:raylib"
 
 main :: proc() {
 	// events queue init
-	events := make([dynamic]Spawn_Event)
-	defer delete(events)
+	events := make_event_queues()
+	defer delete_event_queues(&events)
 
 	// world init
 	world := create_world()
@@ -22,6 +22,7 @@ main :: proc() {
 	// main loop
 	prev := rl.GetTime()
 	acc: f64 = 0
+	tick := 0
 	for !rl.WindowShouldClose() {
 		now := rl.GetTime()
 		dt := now - prev
@@ -30,8 +31,10 @@ main :: proc() {
 		track_mouse(&events)
 		track_kb()
 		for acc >= DT {
+			tick += 1
+			if tick == 3 do tick = 1
 			event_listener(&world, &events)
-			update(&world)
+			update(&world, tick)
 			acc -= DT
 		}
 		build_pixel(&world)
@@ -39,8 +42,7 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, SCALE, rl.WHITE)
-		render_brush(int(rl.GetMouseX()/SCALE), int(rl.GetMouseY()/SCALE))
+		render_brush(int(rl.GetMouseX() / SCALE), int(rl.GetMouseY() / SCALE))
 		rl.EndDrawing()
 	}
 }
-
