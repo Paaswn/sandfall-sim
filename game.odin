@@ -39,8 +39,8 @@ spawn_circle :: proc(world: ^World, se: Spawn_Event) {
 			dy := y - se.y
 			if dx * dx + dy * dy <= se.r * se.r {
 				i := idx(x, y)
-				if world.grid[i] == .Sand do continue
-				world.grid[i] = .Sand
+				if world.grid[i] == se.material do continue
+				world.grid[i] = se.material
 			}
 		}
 	}
@@ -54,6 +54,7 @@ update_grid :: proc(world: ^World) {
 			now := idx(x, y)
 			if grid[now] == .Empty {
 				vy[now] = 0
+				vx[now] = 0
 				continue
 			}
 			vy[now] += GRAVITY * f32(DT)
