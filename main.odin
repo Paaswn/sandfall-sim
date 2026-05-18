@@ -28,6 +28,7 @@ main :: proc() {
 		acc += dt
 		prev = now
 		track_mouse(&events)
+		track_kb()
 		for acc >= DT {
 			event_listener(&world, &events)
 			update(&world)
