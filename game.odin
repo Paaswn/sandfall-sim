@@ -62,7 +62,7 @@ circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
 }
 
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
-    i := idx(x, y)
+	i := idx(x, y)
 	if world.grid[i] == material do return
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y)
@@ -77,6 +77,7 @@ move_cell :: proc(world: ^World, to, now: int) {
 	world.vel_x[now] = 0
 	world.vel_y[now] = 0
 }
+
 update :: proc(world: ^World, tick: int) {
 	for y := HEIGHT - 2; y >= 0; y -= 1 {
 		if tick % 2 == 0 {
@@ -93,104 +94,18 @@ update :: proc(world: ^World, tick: int) {
 
 
 update_row :: proc(world: ^World, x, y: int) {
-	// init local var
-	grid := world.grid
-	vy := world.vel_y
-	vx := world.vel_x
-	now := idx(x, y)
-
-	// clear vel for empty cell
-	if grid[now] == .Empty {
-		vy[now] = 0
-		vx[now] = 0
-		return
-	}
-	world.color[now] = rl.RED // turn to red if it's updated
-	// apply GRAVITY
-	vy[now] += GRAVITY * f32(DT)
-	if update_y(world, x, y) do return
-	// if py can't  move some vy energy to vx
-	vx[now] += vy[now] * 0.4
-	vy[now] = 0
-	if update_x(world, x, y) do return
 	
-	world.color[now] = rl.BLUE // turn to blue if it's stationary
-	// damping a stationary cell
-	vx[now] *= 0.85
-	vy[now] *= 0.4
 }
 
 update_x :: proc(world: ^World, x, y: int) -> bool {
-	grid := world.grid
-	vy := world.vel_y
-	vx := world.vel_x
-	now := idx(x, y)
-
-	// if vx > threshold move it
-	if abs(vx[now]) >= 2.5 {
-		side := rand.choice([]int{-1, 1})
-		for attempt in 1 ..= 2 {
-			if attempt == 2 {
-				side *= -1
-			}
-			// try falling diagonal first then slide to the side
-
-			for dy in ([]int{+1, 0}) {
-				to := idx(x + side, y + dy)
-				if is_outside(x + side, y + dy) {
-					continue
-				}
-				if grid[to] != .Empty {
-					continue
-				}
-				vx[to] = vx[now] * 0.75
-				vy[to] = vy[now] * 0.3
-				move_cell(world, to, now)
-				return true
-			}
-		}
-	}
-	return false
+	
 }
 
 update_y :: proc(world: ^World, x, y: int) -> bool {
-	grid := world.grid
-	vy := world.vel_y
-	vx := world.vel_x
-	now := idx(x, y)
-	step := clamp(int(vy[now]), 1, MAX_SAND_STEP)
-	target_y := y
-	for s in 1 ..= step {
-		next_y := y + s
-		next := idx(x, next_y)
-		// move half an energy from vy to vx
-		if is_outside(x, next_y) {
-			break
-		}
-		// when hit hard surface. move half an energy from vy to vx
-		if grid[next] != .Empty {
-			vx[next] += vy[now] * 0.1
-			break
-		}
-		target_y = next_y
-	}
-	if target_y != y {
-		next := idx(x, target_y)
-		for side in ([]int{-1, 1}) {
-			if is_outside(x + side, target_y) {
-				continue
-			}
-			adjacant := idx(x + side, target_y)
-			vx[adjacant] += vx[now] * 0.05
-		}
-		vy[next] = vy[now]
-		vx[next] = vx[now]
-		move_cell(world, next, now)
-		return true
-	}
-	return false
+	
 }
 
+// deprecated
 explosion :: proc(world: ^World, ee: Explosion_Event) {
 	vx := world.vel_x
 	vy := world.vel_y
