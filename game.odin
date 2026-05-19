@@ -117,7 +117,7 @@ update_x :: proc(world: ^World, x, y: int) -> bool {
 	now := idx(x, y)
 
 	// if vx > threshold move it
-	if abs(vx[now]) >= 4 {
+	if abs(vx[now]) >= 2.5 {
 		side := rand.choice([]int{-1, 1})
 		for attempt in 1 ..= 2 {
 			if attempt == 2 {
@@ -147,7 +147,6 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 	vy := world.vel_y
 	vx := world.vel_x
 	now := idx(x, y)
-
 	step := clamp(int(vy[now]), 1, MAX_SAND_STEP)
 	target_y := y
 	for s in 1 ..= step {
@@ -159,12 +158,20 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 		}
 		// when hit hard surface. move half an energy from vy to vx
 		if grid[next] != .Empty {
+			vx[next] += vy[now] * 0.2
 			break
 		}
 		target_y = next_y
 	}
 	if target_y != y {
 		next := idx(x, target_y)
+		for side in ([]int{-1, 1}) {
+			if is_outside(x + side, target_y) {
+				continue
+			}
+			adjacant := idx(x+side, target_y) 
+			vx[adjacant] += vx[now] * 0.1
+		}
 		vy[next] = vy[now]
 		vx[next] = vx[now]
 		move_cell(world, next, now)
