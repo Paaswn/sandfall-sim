@@ -10,7 +10,6 @@ World :: struct {
 	vel_y: []f32,
 	grid:  []Material,
 	color: []rl.Color,
-	pixel: []rl.Color,
 }
 
 Material :: enum u8 {
@@ -24,7 +23,6 @@ create_world :: proc() -> World {
 		make([]f32, WIDTH * HEIGHT),
 		make([]Material, WIDTH * HEIGHT),
 		make([]rl.Color, WIDTH * HEIGHT),
-		make([]rl.Color, WIDTH * HEIGHT),
 	}
 }
 
@@ -33,7 +31,6 @@ delete_world :: proc(world: ^World) {
 	delete(world.vel_y)
 	delete(world.grid)
 	delete(world.color)
-	delete(world.pixel)
 }
 
 idx :: proc(x, y: int) -> int {
@@ -92,9 +89,22 @@ update :: proc(world: ^World, tick: int) {
 	}
 }
 
-
+should_cell_sleep :: proc(world: ^World, x, y: int) {
+    
+}
 update_row :: proc(world: ^World, x, y: int) {
-	
+    now := idx(x,y) // always in border no need to check
+    vx := world.vel_x
+    vy := world.vel_y
+    grid := world.grid
+    if grid[now] == .Empty { // skip expensive calc for empty cell immediately
+        // reset velocity for empty cell to 0. This is just a backup, normally every moved cell will set their old vel to 0
+        // build_pixel already handle render empty pixel so no need to set here
+        vx[now] = 0
+        vy[now] = 0
+        return
+    }
+    vy[now] += GRAVITY * f32(DT) // apply gravity to an actual cell
 }
 
 update_x :: proc(world: ^World, x, y: int) -> bool {

@@ -4,15 +4,14 @@ import rl "vendor:raylib"
 import "core:math"
 import "core:math/rand"
 
-build_pixel :: proc(world: ^World) {
+build_pixel :: proc(world: ^World, buf: []rl.Color) {
 	for cell, idx in world.grid {
-		pixel := world.pixel
 		switch cell {
 		case .Empty:
-			pixel[idx] = rl.BLACK
+			buf[idx] = rl.BLACK
 
 		case .Sand:
-			pixel[idx] = world.color[idx]
+			buf[idx] = world.color[idx]
 		}
 	}
 }

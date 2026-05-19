@@ -11,6 +11,8 @@ main :: proc() {
 	world := create_world()
 	defer delete_world(&world)
 
+	pixel_buf := make([]rl.Color, WIDTH*HEIGHT)
+	defer delete(pixel_buf)
 	// raylib window init
 	rl.InitWindow(WIDTH * SCALE, HEIGHT * SCALE, "sandfall")
 	rl.HideCursor()
@@ -37,8 +39,8 @@ main :: proc() {
 			update(&world, tick)
 			acc -= DT
 		}
-		build_pixel(&world)
-		rl.UpdateTexture(texture, raw_data(world.pixel))
+		build_pixel(&world, pixel_buf)
+		rl.UpdateTexture(texture, raw_data(pixel_buf))
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, SCALE, rl.WHITE)
