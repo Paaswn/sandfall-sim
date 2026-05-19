@@ -37,7 +37,7 @@ track_mouse :: proc(events: ^Event_Queues) {
 	mouse_scale_x := int(rl.GetMouseX() / SCALE)
 	mouse_scale_y := int(rl.GetMouseY() / SCALE)
 	material_spawn_handler(&events.spawn, mouse_scale_x, mouse_scale_y, spawn_mat)
-	explosion_event_handler(&events.explode, mouse_scale_x, mouse_scale_y, 1000)
+	explosion_event_handler(&events.explode, mouse_scale_x, mouse_scale_y, 1)
 	cursor_size_handler()
 }
 
