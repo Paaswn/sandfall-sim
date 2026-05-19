@@ -102,7 +102,8 @@ cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
 	}
 	below_left := idx(x - 1, y + 1)
 	below_right := idx(x + 1, y + 1)
-	if (grid[below_left] == .Sand && !active[below_left]) || (grid[below_right] == .Sand && !active[below_right]) {
+	if (grid[below_left] == .Sand && !active[below_left]) ||
+	   (grid[below_right] == .Sand && !active[below_right]) {
 		return true
 	}
 
@@ -128,6 +129,7 @@ update_row :: proc(world: ^World, x, y: int) {
 	vx := world.vel_x
 	vy := world.vel_y
 	grid := world.grid
+	active := world.active
 	if grid[now] == .Empty { 	// skip expensive calc for empty cell immediately
 		// reset velocity for empty cell to 0. This is just a guardrail, normally every moved cell will set their old vel to 0
 		// build_pixel already handle render empty pixel so no need to set here
@@ -135,7 +137,18 @@ update_row :: proc(world: ^World, x, y: int) {
 		vy[now] = 0
 		return
 	}
-	vy[now] += GRAVITY * f32(DT) // apply gravity to an actual cell
+	// try waking cell up first
+	if !is_outside(x, y + 1) && grid[idx(x, y + 1)] == .Empty {
+		active[now] = true
+	}
+	// if cell do not active, skip
+	if !active[now] do return
+	if cell_should_sleep(world, x, y) {
+		// if cell should active then skip
+		active[now] = false
+		return
+	}
+	vy[now] += GRAVITY * f32(DT) // apply gravity to an active cell
 }
 
 update_x :: proc(world: ^World, x, y: int) -> bool {
@@ -143,7 +156,41 @@ update_x :: proc(world: ^World, x, y: int) -> bool {
 }
 
 update_y :: proc(world: ^World, x, y: int) -> bool {
+	vy := world.vel_y
+	now := idx(x, y)
+	grid := world.grid
+	steps := int(math.clamp(vy[now], 1, MAX_STEP_Y))
+	target_y := y
+	for s in 1 ..= steps {
+		next_y := y + s
+		if is_outside(x, next_y) {
+			break
+		}
+		if grid[idx(x, next_y)] == .Sand {
+			break
+		}
+		wake_neighbor(world.active, x, next_y, 1)
+		target_y = next_y
+	}
+	if target_y != y {
+		to := idx(x, target_y)
+		move_cell(world, to, now)
+		return true
+	}
+	return false
+}
 
+wake_neighbor :: proc(active: []bool, x, y, off: int) {
+    start_x := math.max(0, x-off)
+    start_y := math.max(0, y-off)
+    end_x := math.min(WIDTH-1, x+off)
+    end_y := math.min(HEIGHT-1, y+off)
+    for y in start_y ..= end_y {
+        for x in start_x ..= end_x {
+            check := idx(x,y)
+            active[check] = true
+        }
+    }
 }
 
 // deprecated
