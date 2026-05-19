@@ -6,10 +6,11 @@ import "core:math/rand"
 import rl "vendor:raylib"
 
 World :: struct {
-	vel_x: []f32,
-	vel_y: []f32,
-	grid:  []Material,
-	color: []rl.Color,
+	vel_x:  []f32,
+	vel_y:  []f32,
+	grid:   []Material,
+	color:  []rl.Color,
+	active: []bool,
 }
 
 Material :: enum u8 {
@@ -23,6 +24,7 @@ create_world :: proc() -> World {
 		make([]f32, WIDTH * HEIGHT),
 		make([]Material, WIDTH * HEIGHT),
 		make([]rl.Color, WIDTH * HEIGHT),
+		make([]bool, WIDTH * HEIGHT),
 	}
 }
 
@@ -31,6 +33,7 @@ delete_world :: proc(world: ^World) {
 	delete(world.vel_y)
 	delete(world.grid)
 	delete(world.color)
+	delete(world.active)
 }
 
 idx :: proc(x, y: int) -> int {
@@ -65,8 +68,6 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.color[i] = get_material_color(material, x, y)
 }
 // only move material, and color
-// vx vy will be reset in the next update any way but also
-// reset vx vy to 0 as a guardrail
 move_cell :: proc(world: ^World, to, now: int) {
 	world.grid[to] = world.grid[now]
 	world.color[to] = world.color[now]
@@ -75,6 +76,39 @@ move_cell :: proc(world: ^World, to, now: int) {
 	world.vel_y[now] = 0
 }
 
+cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
+	vx := world.vel_x
+	vy := world.vel_y
+	grid := world.grid
+	active := world.active
+	now := idx(x, y)
+	// check cell speed
+	if vx[now] * vx[now] + vy[now] * vy[now] > SLEEP_EPSILON_X * SLEEP_EPSILON_Y {
+		return false
+	}
+	// if below is border go to sleep
+	if is_outside(x, y + 1) {
+		return true
+	}
+	// check if on a sleeping cell
+	below := idx(x, y + 1)
+	if active[below] || grid[below] == .Empty {
+		return false
+	}
+
+	// check if being held by solid cell
+	if is_outside(x - 1, y + 1) || is_outside(x + 1, y + 1) {
+		return true
+	}
+	below_left := idx(x - 1, y + 1)
+	below_right := idx(x + 1, y + 1)
+	if (grid[below_left] == .Sand && !active[below_left]) || (grid[below_right] == .Sand && !active[below_right]) {
+		return true
+	}
+
+	return true
+
+}
 update :: proc(world: ^World, tick: int) {
 	for y := HEIGHT - 2; y >= 0; y -= 1 {
 		if tick % 2 == 0 {
@@ -89,30 +123,27 @@ update :: proc(world: ^World, tick: int) {
 	}
 }
 
-should_cell_sleep :: proc(world: ^World, x, y: int) {
-    
-}
 update_row :: proc(world: ^World, x, y: int) {
-    now := idx(x,y) // always in border no need to check
-    vx := world.vel_x
-    vy := world.vel_y
-    grid := world.grid
-    if grid[now] == .Empty { // skip expensive calc for empty cell immediately
-        // reset velocity for empty cell to 0. This is just a backup, normally every moved cell will set their old vel to 0
-        // build_pixel already handle render empty pixel so no need to set here
-        vx[now] = 0
-        vy[now] = 0
-        return
-    }
-    vy[now] += GRAVITY * f32(DT) // apply gravity to an actual cell
+	now := idx(x, y) // always in border no need to check
+	vx := world.vel_x
+	vy := world.vel_y
+	grid := world.grid
+	if grid[now] == .Empty { 	// skip expensive calc for empty cell immediately
+		// reset velocity for empty cell to 0. This is just a guardrail, normally every moved cell will set their old vel to 0
+		// build_pixel already handle render empty pixel so no need to set here
+		vx[now] = 0
+		vy[now] = 0
+		return
+	}
+	vy[now] += GRAVITY * f32(DT) // apply gravity to an actual cell
 }
 
 update_x :: proc(world: ^World, x, y: int) -> bool {
-	
+
 }
 
 update_y :: proc(world: ^World, x, y: int) -> bool {
-	
+
 }
 
 // deprecated
