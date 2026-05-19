@@ -17,6 +17,22 @@ Material :: enum u8 {
 	Sand,
 }
 
+create_world :: proc() -> World {
+	return World {
+		make([]f32, WIDTH * HEIGHT),
+		make([]f32, WIDTH * HEIGHT),
+		make([]Material, WIDTH * HEIGHT),
+		make([]rl.Color, WIDTH * HEIGHT),
+	}
+}
+
+delete_world :: proc(world: ^World) {
+	delete(world.vel_y)
+	delete(world.vel_x)
+	delete(world.grid)
+	delete(world.pixel)
+}
+
 idx :: proc(x, y: int) -> int {
 	idx := y * WIDTH + x
 	return idx
@@ -26,52 +42,6 @@ is_outside :: proc(x, y: int) -> bool {
 	return x < 0 || y < 0 || x > WIDTH - 1 || y > HEIGHT - 1
 }
 
-update :: proc(world: ^World, tick: int) {
-	for y := HEIGHT - 2; y >= 0; y -= 1 {
-		if tick % 2 == 0 {
-			for x := 0; x < WIDTH; x += 1 {
-				update_row(world, x, y)
-			}
-		} else {
-			for x := WIDTH - 1; x >= 0; x -= 1 {
-				update_row(world, x, y)
-			}
-		}
-	}
-}
-
-explosion :: proc(world: ^World, ee: Explosion_Event) {
-	vx := world.vel_x
-	vy := world.vel_y
-	for x in ee.x - ee.r ..= ee.x + ee.r {
-		for y in ee.y - ee.r ..= ee.y + ee.r {
-			if is_outside(x, y) {
-				continue
-			}
-			dx := x - ee.x
-			dy := y - ee.y
-			dist_sq := dx * dx + dy * dy
-			if dist_sq > 0 && dist_sq <= ee.r * ee.r {
-				i := idx(x, y)
-				if world.grid[i] != .Empty {
-					dist := math.sqrt(f32(dist_sq))
-					dir_x := f32(dx) / dist
-					dir_y := f32(dy) / dist
-					falloff := 1.0 - dist / f32(ee.r)
-					weighted_force := ee.force * falloff
-					vx[i] += dir_x * weighted_force
-					vy[i] += dir_y * weighted_force
-				}
-			}
-			if dist_sq > 0 && dist_sq <= ee.r * ee.r / 4 {
-				i := idx(x, y)
-				if world.grid[i] != .Empty {
-					world.grid[i] = .Empty
-				}
-			}
-		}
-	}
-}
 
 circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
 	for x in se.x - se.r ..= se.x + se.r {
@@ -89,7 +59,6 @@ circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
 		}
 	}
 }
-
 // only move material.
 // vx vy will be reset in the next update any way but also
 // reset vx vy to 0 as a guardrail
@@ -99,6 +68,20 @@ move_cell :: proc(world: ^World, to, now: int) {
 	world.vel_x[now] = 0
 	world.vel_y[now] = 0
 }
+update :: proc(world: ^World, tick: int) {
+	for y := HEIGHT - 2; y >= 0; y -= 1 {
+		if tick % 2 == 0 {
+			for x := 0; x < WIDTH; x += 1 {
+				update_row(world, x, y)
+			}
+		} else {
+			for x := WIDTH - 1; x >= 0; x -= 1 {
+				update_row(world, x, y)
+			}
+		}
+	}
+}
+
 
 update_row :: proc(world: ^World, x, y: int) {
 	// init local var
@@ -117,7 +100,7 @@ update_row :: proc(world: ^World, x, y: int) {
 	// apply GRAVITY
 	vy[now] += GRAVITY * f32(DT)
 	if update_y(world, x, y) do return
-	// if can't py move some vy energy to vx
+	// if py can't  move some vy energy to vx
 	vx[now] += vy[now] * 0.4
 	vy[now] = 0
 	if update_x(world, x, y) do return
@@ -158,6 +141,7 @@ update_x :: proc(world: ^World, x, y: int) -> bool {
 	}
 	return false
 }
+
 update_y :: proc(world: ^World, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y
@@ -188,18 +172,36 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 	}
 	return false
 }
-create_world :: proc() -> World {
-	return World {
-		make([]f32, WIDTH * HEIGHT),
-		make([]f32, WIDTH * HEIGHT),
-		make([]Material, WIDTH * HEIGHT),
-		make([]rl.Color, WIDTH * HEIGHT),
-	}
-}
 
-delete_world :: proc(world: ^World) {
-	delete(world.vel_y)
-	delete(world.vel_x)
-	delete(world.grid)
-	delete(world.pixel)
+explosion :: proc(world: ^World, ee: Explosion_Event) {
+	vx := world.vel_x
+	vy := world.vel_y
+	for x in ee.x - ee.r ..= ee.x + ee.r {
+		for y in ee.y - ee.r ..= ee.y + ee.r {
+			if is_outside(x, y) {
+				continue
+			}
+			dx := x - ee.x
+			dy := y - ee.y
+			dist_sq := dx * dx + dy * dy
+			if dist_sq > 0 && dist_sq <= ee.r * ee.r {
+				i := idx(x, y)
+				if world.grid[i] != .Empty {
+					dist := math.sqrt(f32(dist_sq))
+					dir_x := f32(dx) / dist
+					dir_y := f32(dy) / dist
+					falloff := 1.0 - dist / f32(ee.r)
+					weighted_force := ee.force * falloff
+					vx[i] += dir_x * weighted_force
+					vy[i] += dir_y * weighted_force
+				}
+			}
+			if dist_sq > 0 && dist_sq <= ee.r * ee.r / 4 {
+				i := idx(x, y)
+				if world.grid[i] != .Empty {
+					world.grid[i] = .Empty
+				}
+			}
+		}
+	}
 }
