@@ -43,6 +43,7 @@ main :: proc() {
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, SCALE, rl.WHITE)
 		render_brush(int(rl.GetMouseX() / SCALE), int(rl.GetMouseY() / SCALE))
+		rl.DrawFPS(10,10)
 		rl.EndDrawing()
 	}
 }

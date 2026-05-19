@@ -6,9 +6,10 @@ import "core:math/rand"
 import rl "vendor:raylib"
 
 World :: struct {
-	vel_y: []f32,
 	vel_x: []f32,
+	vel_y: []f32,
 	grid:  []Material,
+	color: []rl.Color,
 	pixel: []rl.Color,
 }
 
@@ -23,13 +24,15 @@ create_world :: proc() -> World {
 		make([]f32, WIDTH * HEIGHT),
 		make([]Material, WIDTH * HEIGHT),
 		make([]rl.Color, WIDTH * HEIGHT),
+		make([]rl.Color, WIDTH * HEIGHT),
 	}
 }
 
 delete_world :: proc(world: ^World) {
-	delete(world.vel_y)
 	delete(world.vel_x)
+	delete(world.vel_y)
 	delete(world.grid)
+	delete(world.color)
 	delete(world.pixel)
 }
 
@@ -52,18 +55,24 @@ circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
 			dx := x - se.x
 			dy := y - se.y
 			if dx * dx + dy * dy <= se.r * se.r {
-				i := idx(x, y)
-				if world.grid[i] == se.material do continue
-				world.grid[i] = se.material
+				spawn_material(world, se.material, x, y)
 			}
 		}
 	}
 }
-// only move material.
+
+spawn_material :: proc(world: ^World, material: Material, x, y: int) {
+    i := idx(x, y)
+	if world.grid[i] == material do return
+	world.grid[i] = material
+	world.color[i] = get_material_color(material, x, y)
+}
+// only move material, and color
 // vx vy will be reset in the next update any way but also
 // reset vx vy to 0 as a guardrail
 move_cell :: proc(world: ^World, to, now: int) {
 	world.grid[to] = world.grid[now]
+	world.color[to] = world.color[now]
 	world.grid[now] = .Empty
 	world.vel_x[now] = 0
 	world.vel_y[now] = 0
@@ -96,7 +105,7 @@ update_row :: proc(world: ^World, x, y: int) {
 		vx[now] = 0
 		return
 	}
-
+	world.color[now] = rl.RED // turn to red if it's updated
 	// apply GRAVITY
 	vy[now] += GRAVITY * f32(DT)
 	if update_y(world, x, y) do return
@@ -104,7 +113,8 @@ update_row :: proc(world: ^World, x, y: int) {
 	vx[now] += vy[now] * 0.4
 	vy[now] = 0
 	if update_x(world, x, y) do return
-
+	
+	world.color[now] = rl.BLUE // turn to blue if it's stationary
 	// damping a stationary cell
 	vx[now] *= 0.85
 	vy[now] *= 0.4
@@ -124,6 +134,7 @@ update_x :: proc(world: ^World, x, y: int) -> bool {
 				side *= -1
 			}
 			// try falling diagonal first then slide to the side
+
 			for dy in ([]int{+1, 0}) {
 				to := idx(x + side, y + dy)
 				if is_outside(x + side, y + dy) {
@@ -132,8 +143,8 @@ update_x :: proc(world: ^World, x, y: int) -> bool {
 				if grid[to] != .Empty {
 					continue
 				}
-				vx[to] = vx[now] * 0.5
-				vy[to] = vy[now] * 0.2
+				vx[to] = vx[now] * 0.75
+				vy[to] = vy[now] * 0.3
 				move_cell(world, to, now)
 				return true
 			}
@@ -158,7 +169,7 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 		}
 		// when hit hard surface. move half an energy from vy to vx
 		if grid[next] != .Empty {
-			vx[next] += vy[now] * 0.2
+			vx[next] += vy[now] * 0.1
 			break
 		}
 		target_y = next_y
@@ -169,8 +180,8 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 			if is_outside(x + side, target_y) {
 				continue
 			}
-			adjacant := idx(x+side, target_y) 
-			vx[adjacant] += vx[now] * 0.1
+			adjacant := idx(x + side, target_y)
+			vx[adjacant] += vx[now] * 0.05
 		}
 		vy[next] = vy[now]
 		vx[next] = vx[now]

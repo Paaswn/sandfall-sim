@@ -6,8 +6,8 @@ select_explosive := false
 spawn_radius := 4
 // constant
 DT: f64 : 1.0 / 60.0
-WIDTH :: 250
-HEIGHT :: 180
+WIDTH :: 480
+HEIGHT :: 270
 GRAVITY: f32 : 45
 SIDE_ACCEL: f32 : 20
 SIDE_FRICTION: f32 : 0.75
