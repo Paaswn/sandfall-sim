@@ -68,6 +68,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.color[i] = get_material_color(material, x, y)
 }
 // only move material, and color
+// * doesn't move velocity *
 move_cell :: proc(world: ^World, to, now: int) {
 	world.grid[to] = world.grid[now]
 	world.color[to] = world.color[now]
@@ -84,7 +85,7 @@ cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
 	now := idx(x, y)
 	// check cell speed
 	if vx[now] * vx[now] + vy[now] * vy[now] > SLEEP_EPSILON_X * SLEEP_EPSILON_Y {
-		return false
+    	return false
 	}
 	// if below is border go to sleep
 	if is_outside(x, y + 1) {
@@ -149,11 +150,14 @@ update_row :: proc(world: ^World, x, y: int) {
 		return
 	}
 	vy[now] += GRAVITY * f32(DT) // apply gravity to an active cell
+	if update_y(world, x, y) do return 
+	vy[now] *= 0.5
+	vx[now] *= 0.5
 }
 
-update_x :: proc(world: ^World, x, y: int) -> bool {
+// update_x :: proc(world: ^World, x, y: int) -> bool {
 
-}
+// }
 
 update_y :: proc(world: ^World, x, y: int) -> bool {
 	vy := world.vel_y
@@ -174,6 +178,7 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 	}
 	if target_y != y {
 		to := idx(x, target_y)
+		vy[to] = vy[now]
 		move_cell(world, to, now)
 		return true
 	}

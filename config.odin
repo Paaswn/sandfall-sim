@@ -1,6 +1,13 @@
 package main
 
+Debug :: enum {
+    OFF, 
+    VELOCITY_X,
+    VELOCITY_Y,
+    ACTIVE_CELL
+}
 // runtime config
+debug_mode := Debug.OFF
 spawn_mat := Material.Sand
 select_explosive := false
 spawn_radius := 4

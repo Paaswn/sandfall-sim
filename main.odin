@@ -39,7 +39,7 @@ main :: proc() {
 			update(&world, tick)
 			acc -= DT
 		}
-		build_pixel(&world, pixel_buf)
+		build_pixel_buf(&world, pixel_buf)
 		rl.UpdateTexture(texture, raw_data(pixel_buf))
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)

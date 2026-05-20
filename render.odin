@@ -1,17 +1,39 @@
 package main
 
-import rl "vendor:raylib"
 import "core:math"
 import "core:math/rand"
+import rl "vendor:raylib"
 
-build_pixel :: proc(world: ^World, buf: []rl.Color) {
+build_pixel_buf :: proc(world: ^World, buf: []rl.Color) {
+	switch debug_mode {
+	case .OFF:
+		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, color: []rl.Color) {
+			buf[idx] = color[idx]
+		})
+	case .VELOCITY_X:
+
+
+	case .VELOCITY_Y:
+
+
+	case .ACTIVE_CELL:
+
+
+	}
+}
+
+build_pixel :: proc(
+	world: ^World,
+	buf: []rl.Color,
+	build_sand: proc(idx: int, buf: []rl.Color, color: []rl.Color),
+) {
 	for cell, idx in world.grid {
 		switch cell {
 		case .Empty:
 			buf[idx] = rl.BLACK
 
 		case .Sand:
-			buf[idx] = world.color[idx]
+			build_sand(idx, buf, world.color)
 		}
 	}
 }
@@ -53,7 +75,7 @@ random_shade :: proc(base: rl.Color, x, y, variance: int) -> rl.Color {
 	// 1. Generate a single random offset for uniform shading
 	// If variance is 30, offset will be between -30 and +30
 	hash := (x * 73856093) ~ (y * 19349663)
-		
+
 	offset := (hash % (variance * 2 + 1)) - variance
 
 	// 2. Apply offset and clamp values between 0 and 255 to prevent integer overflow
