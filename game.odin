@@ -61,11 +61,13 @@ circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
 	}
 }
 
+total_spawn: u64 = 0
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
+	total_spawn += 1
 	world.grid[i] = material
-	world.color[i] = get_material_color(material, x, y)
+	world.color[i] = get_material_color(material, x, y, total_spawn)
 }
 // only move material, and color
 // * doesn't move velocity *
@@ -84,35 +86,41 @@ cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
 	active := world.active
 	now := idx(x, y)
 	// check cell speed
-	if vx[now] * vx[now] + vy[now] * vy[now] > SLEEP_EPSILON_X * SLEEP_EPSILON_Y {
-    	return false
+	if vx[now] * vx[now] + vy[now] * vy[now] > SLEEP_EPSILON {
+		// fmt.print(vx[now] * vx[now] + vy[now] * vy[now])
+		// fmt.println("speed too high no sleep")
+		return false
 	}
 	// if below is border go to sleep
 	if is_outside(x, y + 1) {
+		// fmt.println("below border can sleep")
 		return true
 	}
-	// check if on a sleeping cell
+	// check if falling
 	below := idx(x, y + 1)
-	if active[below] || grid[below] == .Empty {
+	if !is_solid_and_sleep(active, grid, below) {
+		// fmt.println("is falling no sleep")
 		return false
 	}
 
+	// fmt.println("is supported by sleeping cell")
 	// check if being held by solid cell
 	if is_outside(x - 1, y + 1) || is_outside(x + 1, y + 1) {
 		return true
 	}
 	below_left := idx(x - 1, y + 1)
 	below_right := idx(x + 1, y + 1)
-	if (grid[below_left] == .Sand && !active[below_left]) ||
-	   (grid[below_right] == .Sand && !active[below_right]) {
+	if (is_solid_and_sleep(active, grid, below_left)) ||
+	   (is_solid_and_sleep(active, grid, below_right)) {
 		return true
 	}
 
+	// fmt.println("have too low energy")
 	return true
 
 }
 update :: proc(world: ^World, tick: int) {
-	for y := HEIGHT - 2; y >= 0; y -= 1 {
+	for y := HEIGHT - 1; y >= 0; y -= 1 {
 		if tick % 2 == 0 {
 			for x := 0; x < WIDTH; x += 1 {
 				update_row(world, x, y)
@@ -150,7 +158,7 @@ update_row :: proc(world: ^World, x, y: int) {
 		return
 	}
 	vy[now] += GRAVITY * f32(DT) // apply gravity to an active cell
-	if update_y(world, x, y) do return 
+	if update_y(world, x, y) do return
 	vy[now] *= 0.5
 	vx[now] *= 0.5
 }
@@ -186,16 +194,16 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 }
 
 wake_neighbor :: proc(active: []bool, x, y, off: int) {
-    start_x := math.max(0, x-off)
-    start_y := math.max(0, y-off)
-    end_x := math.min(WIDTH-1, x+off)
-    end_y := math.min(HEIGHT-1, y+off)
-    for y in start_y ..= end_y {
-        for x in start_x ..= end_x {
-            check := idx(x,y)
-            active[check] = true
-        }
-    }
+	start_x := math.max(0, x - off)
+	start_y := math.max(0, y - off)
+	end_x := math.min(WIDTH - 1, x + off)
+	end_y := math.min(HEIGHT - 1, y + off)
+	for y in start_y ..= end_y {
+		for x in start_x ..= end_x {
+			check := idx(x, y)
+			active[check] = true
+		}
+	}
 }
 
 // deprecated
@@ -230,4 +238,12 @@ explosion :: proc(world: ^World, ee: Explosion_Event) {
 			}
 		}
 	}
+}
+
+is_solid :: proc(grid: []Material, idx: int) -> bool {
+	return grid[idx] == .Sand
+}
+
+is_solid_and_sleep :: proc(active: []bool, grid: []Material, idx: int) -> bool {
+	return is_solid(grid, idx) && !active[idx]
 }

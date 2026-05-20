@@ -43,26 +43,30 @@ track_mouse :: proc(events: ^Event_Queues) {
 
 track_kb :: proc() {
 	actions: for input, action in KEY_BINDS {
-		if !rl.IsKeyPressed(input.trigger) {
-			continue
-		}
 		for mod in input.modifer {
 			switch mod {
 			case .None:
-				break
+				if rl.IsKeyDown(.LEFT_CONTROL) ||
+				   rl.IsKeyDown(.LEFT_SHIFT) ||
+				   rl.IsKeyDown(.LEFT_ALT) {
+					continue actions
+				}
 			case .Ctrl:
-				if !rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) {
+				if !rl.IsKeyDown(.LEFT_CONTROL) {
 					continue actions
 				}
 			case .Shift:
-				if !rl.IsKeyDown(rl.KeyboardKey.LEFT_SHIFT) {
+				if !rl.IsKeyDown(.LEFT_SHIFT) {
 					continue actions
 				}
 			case .Alt:
-				if !rl.IsKeyDown(rl.KeyboardKey.LEFT_ALT) {
+				if !rl.IsKeyDown(.LEFT_ALT) {
 					continue actions
 				}
 			}
+		}
+		if !rl.IsKeyPressed(input.trigger) {
+			continue
 		}
 		switch action {
 		case .Debug_Off:
