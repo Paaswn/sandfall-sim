@@ -1,14 +1,42 @@
 package main
 
+import rl "vendor:raylib"
 Debug :: enum {
-    OFF, 
-    VELOCITY_X,
-    VELOCITY_Y,
-    ACTIVE_CELL
+    Off, 
+    Velocity_Y,
+    Velocity_X,
+    Active_Cell
+}
+Action :: enum {
+    Debug_Off,
+    Debug_Velocity_Y,
+    Debug_Velocity_X,
+    Debug_Active_Cell,
+    Select_Sand,
+    Select_Empty
+}
+Modifier_Key :: enum {
+    None,
+    Ctrl, 
+    Shift,
+    Alt
+}
+Modifiers :: bit_set[Modifier_Key]
+Input :: struct {
+    trigger: rl.KeyboardKey,
+    modifer: Modifiers
+}
+KEY_BINDS :: [Action]Input {
+    .Debug_Off = {.ONE, { .Ctrl }},
+    .Debug_Velocity_Y = {.TWO, {.Ctrl}},
+    .Debug_Velocity_X = {.THREE , {.Ctrl}},
+    .Debug_Active_Cell = {.FOUR, {.Ctrl}},
+    .Select_Sand = {.TWO, {.None}},
+    .Select_Empty = {.ONE, {.None}}
 }
 // runtime config
-debug_mode := Debug.OFF
-spawn_mat := Material.Sand
+debug_mode := Debug.Off
+current_mat := Material.Sand
 select_explosive := false
 spawn_radius := 4
 // constant

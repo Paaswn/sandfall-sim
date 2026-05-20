@@ -36,18 +36,48 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 track_mouse :: proc(events: ^Event_Queues) {
 	mouse_scale_x := int(rl.GetMouseX() / SCALE)
 	mouse_scale_y := int(rl.GetMouseY() / SCALE)
-	material_spawn_handler(&events.spawn, mouse_scale_x, mouse_scale_y, spawn_mat)
+	material_spawn_handler(&events.spawn, mouse_scale_x, mouse_scale_y, current_mat)
 	explosion_event_handler(&events.explode, mouse_scale_x, mouse_scale_y, 1)
 	cursor_size_handler()
 }
 
 track_kb :: proc() {
-	if rl.IsKeyPressed(.ONE) {
-		spawn_mat = .Empty
-	} else if rl.IsKeyPressed(.TWO) {
-		spawn_mat = .Sand
-	} else if rl.IsKeyPressed(.THREE) {
-		select_explosive = !select_explosive
+	actions: for input, action in KEY_BINDS {
+		if !rl.IsKeyPressed(input.trigger) {
+			continue
+		}
+		for mod in input.modifer {
+			switch mod {
+			case .None:
+				break
+			case .Ctrl:
+				if !rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) {
+					continue actions
+				}
+			case .Shift:
+				if !rl.IsKeyDown(rl.KeyboardKey.LEFT_SHIFT) {
+					continue actions
+				}
+			case .Alt:
+				if !rl.IsKeyDown(rl.KeyboardKey.LEFT_ALT) {
+					continue actions
+				}
+			}
+		}
+		switch action {
+		case .Debug_Off:
+			debug_mode = Debug.Off
+		case .Debug_Velocity_Y:
+			debug_mode = Debug.Velocity_Y
+		case .Debug_Velocity_X:
+			debug_mode = Debug.Velocity_X
+		case .Debug_Active_Cell:
+			debug_mode = Debug.Active_Cell
+		case .Select_Sand:
+			current_mat = .Sand
+		case .Select_Empty:
+			current_mat = .Empty
+		}
 	}
 }
 

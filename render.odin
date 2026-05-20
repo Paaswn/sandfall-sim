@@ -6,18 +6,25 @@ import rl "vendor:raylib"
 
 build_pixel_buf :: proc(world: ^World, buf: []rl.Color) {
 	switch debug_mode {
-	case .OFF:
-		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, color: []rl.Color) {
-			buf[idx] = color[idx]
+	case .Off:
+		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^World) {
+			buf[idx] = world.color[idx]
 		})
-	case .VELOCITY_X:
+	case .Velocity_X:
 
 
-	case .VELOCITY_Y:
+	case .Velocity_Y:
 
 
-	case .ACTIVE_CELL:
+	case .Active_Cell:
 
+	build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^World) {
+		if world.active[idx] {
+		    buf[idx] = rl.GREEN
+		} else {
+		    buf[idx] = rl.DARKGRAY
+		}
+	})
 
 	}
 }
@@ -25,7 +32,7 @@ build_pixel_buf :: proc(world: ^World, buf: []rl.Color) {
 build_pixel :: proc(
 	world: ^World,
 	buf: []rl.Color,
-	build_sand: proc(idx: int, buf: []rl.Color, color: []rl.Color),
+	fill_color: proc(idx: int, buf: []rl.Color, color: ^World),
 ) {
 	for cell, idx in world.grid {
 		switch cell {
@@ -33,7 +40,7 @@ build_pixel :: proc(
 			buf[idx] = rl.BLACK
 
 		case .Sand:
-			build_sand(idx, buf, world.color)
+			fill_color(idx, buf, world)
 		}
 	}
 }
