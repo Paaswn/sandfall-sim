@@ -19,6 +19,7 @@ Material :: enum u8 {
 }
 
 create_world :: proc() -> World {
+
 	return World {
 		make([]f32, WIDTH * HEIGHT),
 		make([]f32, WIDTH * HEIGHT),
@@ -47,8 +48,8 @@ is_outside :: proc(x, y: int) -> bool {
 
 
 circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
-	for x in se.x - se.r ..= se.x + se.r {
-		for y in se.y - se.r ..= se.y + se.r {
+	for y := se.y + se.r - 1; y >= se.y - se.r; y -= 1 {
+		for x in se.x - se.r ..= se.x + se.r {
 			if is_outside(x, y) {
 				continue
 			}
@@ -70,7 +71,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.color[i] = get_material_color(material, x, y, total_spawn)
 }
 // only move material, and color
-// * doesn't move velocity *
+// **doesn't move velocity**
 move_cell :: proc(world: ^World, to, now: int) {
 	world.grid[to] = world.grid[now]
 	world.color[to] = world.color[now]
@@ -86,24 +87,20 @@ cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
 	active := world.active
 	now := idx(x, y)
 	// check cell speed
-	if vx[now] * vx[now] + vy[now] * vy[now] > SLEEP_EPSILON {
-		// fmt.print(vx[now] * vx[now] + vy[now] * vy[now])
-		// fmt.println("speed too high no sleep")
+	vel_sqr := vx[now] * vx[now] + vy[now] * vy[now]
+	if vel_sqr > SLEEP_EPSILON {
 		return false
 	}
 	// if below is border go to sleep
 	if is_outside(x, y + 1) {
-		// fmt.println("below border can sleep")
 		return true
 	}
 	// check if falling
 	below := idx(x, y + 1)
 	if !is_solid_and_sleep(active, grid, below) {
-		// fmt.println("is falling no sleep")
 		return false
 	}
 
-	// fmt.println("is supported by sleeping cell")
 	// check if being held by solid cell
 	if is_outside(x - 1, y + 1) || is_outside(x + 1, y + 1) {
 		return true
@@ -115,7 +112,6 @@ cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
 		return true
 	}
 
-	// fmt.println("have too low energy")
 	return true
 
 }
@@ -159,16 +155,39 @@ update_row :: proc(world: ^World, x, y: int) {
 	}
 	vy[now] += GRAVITY * f32(DT) // apply gravity to an active cell
 	if update_y(world, x, y) do return
+	if update_x(world, x, y) do return
 	vy[now] *= 0.5
 	vx[now] *= 0.5
 }
 
-// update_x :: proc(world: ^World, x, y: int) -> bool {
+update_x :: proc(world: ^World, x, y: int) -> bool {
+	grid := world.grid
+	vx := world.vel_x
+	now := idx(x, y)
+	vx_amp := abs(vx[now])
+	if vx_amp > X_THRESHOLD {
+		side := int(vx[now] / vx_amp)
+		// try fall diag first then horizontal
+		for h in ([]int{-1, 0}) {
+			if is_outside(x + side, y + h) {
+				continue
+			}
+			to := idx(x + side, y + h)
+			if is_solid(grid, to) { 	// maybe add energy
+				continue
+			}
+			wake_neighbor(world, x, y, x + side, y + h, 1)
+			move_cell(world, to, now)
+			return true
 
-// }
+		}
+	}
+	return false
+}
 
 update_y :: proc(world: ^World, x, y: int) -> bool {
 	vy := world.vel_y
+	vx := world.vel_x
 	now := idx(x, y)
 	grid := world.grid
 	steps := int(math.clamp(vy[now], 1, MAX_STEP_Y))
@@ -176,32 +195,59 @@ update_y :: proc(world: ^World, x, y: int) -> bool {
 	for s in 1 ..= steps {
 		next_y := y + s
 		if is_outside(x, next_y) {
+			if random_side() > 0 {
+				vx[now] += vy[now] * 0.9
+			} else {
+				vx[now] -= vy[now] * 0.9
+			}
+			vy[now] *= 0.5
 			break
 		}
-		if grid[idx(x, next_y)] == .Sand {
+		next := idx(x, next_y)
+		if is_solid(grid, next) { 	// in case we stuck we will transfer energy right here
+			if random_side() > 0 {
+				vx[next] += vy[now] * 0.3
+				vx[now] += vy[now] * 0.9
+			} else {
+				vx[next] -= vy[now] * 0.3
+				vx[now] -= vy[now] * 0.9
+			}
+			vy[now] *= 0.5
 			break
 		}
-		wake_neighbor(world.active, x, next_y, 1)
+		wake_neighbor(world, x, y, x, next_y, 1)
 		target_y = next_y
 	}
 	if target_y != y {
 		to := idx(x, target_y)
 		vy[to] = vy[now]
+		vx[to] = vx[now]
 		move_cell(world, to, now)
 		return true
 	}
 	return false
 }
 
-wake_neighbor :: proc(active: []bool, x, y, off: int) {
-	start_x := math.max(0, x - off)
-	start_y := math.max(0, y - off)
-	end_x := math.min(WIDTH - 1, x + off)
-	end_y := math.min(HEIGHT - 1, y + off)
+wake_neighbor :: proc(world: ^World, start_x, start_y, origin_x, origin_y, off: int) {
+	start_x := math.max(0, origin_x - off)
+	start_y := math.max(0, origin_y - off)
+	end_x := math.min(WIDTH - 1, origin_x + off)
+	end_y := math.min(HEIGHT - 1, origin_y + off)
 	for y in start_y ..= end_y {
 		for x in start_x ..= end_x {
 			check := idx(x, y)
-			active[check] = true
+			if x != origin_x && y != origin_y {
+				start := idx(start_x, start_y)
+				world.vel_y[check] += world.vel_y[start] * NEIGHBOR_TRANSFER
+				if x < origin_x {
+					world.vel_x[check] += world.vel_y[start] * NEIGHBOR_TRANSFER
+					world.vel_x[check] += world.vel_x[start] * NEIGHBOR_TRANSFER * 4
+				} else if x > origin_x {
+					world.vel_x[check] -= world.vel_y[start] * NEIGHBOR_TRANSFER
+					world.vel_x[check] -= world.vel_x[start] * NEIGHBOR_TRANSFER * 4
+				}
+				world.active[check] = true
+			}
 		}
 	}
 }
@@ -246,4 +292,7 @@ is_solid :: proc(grid: []Material, idx: int) -> bool {
 
 is_solid_and_sleep :: proc(active: []bool, grid: []Material, idx: int) -> bool {
 	return is_solid(grid, idx) && !active[idx]
+}
+random_side :: proc() -> int {
+	return int(rand.uint32() & 1) * 2 - 1
 }

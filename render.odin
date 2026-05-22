@@ -1,7 +1,6 @@
 package main
 
 import "core:math"
-import "core:math/rand"
 import rl "vendor:raylib"
 
 build_pixel_buf :: proc(world: ^World, buf: []rl.Color) {
@@ -81,7 +80,7 @@ get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> rl.Color {
 }
 
 random_color_vel :: proc(vel: f32) -> rl.Color {
-	value := vel / MAX_STEP_Y
+	value := abs(vel / MAX_STEP_Y)
 	new_r := u8(math.clamp(int(value * 255), 0, 255))
 	return rl.Color{new_r, 20, 20, 255}
 }
