@@ -16,8 +16,10 @@ Explosion_Event :: struct {
 }
 
 Spawn_Event :: struct {
-	x:        int,
-	y:        int,
+	x0:       int,
+	y0:       int,
+	x1:       int,
+	y1:       int,
 	r:        int,
 	material: Material,
 }
@@ -25,7 +27,7 @@ Spawn_Event :: struct {
 
 event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	for se in events.spawn {
-		circle_brush_spawn(world, se)
+		brush_spawn(world, se)
 	}
 	for ee in events.explode {
 		explosion(world, ee)
@@ -33,6 +35,9 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	clear_queues(events)
 }
 
+old_mouse_x: int
+old_mouse_y: int
+has_prev_mouse := false
 track_mouse :: proc(events: ^Event_Queues) {
 	mouse_scale_x := int(rl.GetMouseX() / SCALE)
 	mouse_scale_y := int(rl.GetMouseY() / SCALE)
@@ -98,9 +103,16 @@ explosion_event_handler :: proc(expl: ^[dynamic]Explosion_Event, msx, msy: int, 
 material_spawn_handler :: proc(spawn: ^[dynamic]Spawn_Event, msx, msy: int, mat: Material) {
 	if rl.IsMouseButtonDown(.LEFT) && !select_explosive {
 		if len(spawn) < 512 {
-			append(spawn, Spawn_Event{msx, msy, spawn_radius, mat})
+			if has_prev_mouse {
+				append(spawn, Spawn_Event{old_mouse_x, old_mouse_y, msx, msy, spawn_radius, mat})
+			} else {
+				append(spawn, Spawn_Event{msx, msy, msx, msy, spawn_radius, mat})
+				has_prev_mouse = true
+			}
+			old_mouse_x = msx
+			old_mouse_y = msy
 		}
-	}
+	} else do has_prev_mouse = false
 }
 
 cursor_size_handler :: proc() {

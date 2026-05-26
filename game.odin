@@ -16,7 +16,7 @@ World :: struct {
 Material :: enum u8 {
 	Empty,
 	Sand,
-	Cement
+	Cement,
 }
 
 create_world :: proc() -> World {
@@ -48,17 +48,52 @@ is_outside :: proc(x, y: int) -> bool {
 }
 
 
-circle_brush_spawn :: proc(world: ^World, se: Spawn_Event) {
-	for x in se.x - se.r ..= se.x + se.r {
-		for y in se.y - se.r ..= se.y + se.r {
+circle_brush_spawn :: proc(world: ^World, ox, oy, r: int, material: Material) {
+	for x in ox - r ..= ox + r {
+		for y in oy - r ..= oy + r {
 			if is_outside(x, y) {
 				continue
 			}
-			dx := x - se.x
-			dy := y - se.y
-			if dx * dx + dy * dy < se.r * se.r {
-				spawn_material(world, se.material, x, y)
+			dx := x - ox
+			dy := y - oy
+			if dx * dx + dy * dy < r * r {
+				spawn_material(world, material, x, y)
 			}
+		}
+	}
+}
+brush_spawn :: proc(world: ^World, se: Spawn_Event) {
+    dx := abs(se.x1 - se.x0)
+	dy := -abs(se.y1 - se.y0)
+    
+	sx := 1
+	if se.x0 >= se.x1 do sx = -1
+    
+	sy := 1
+	if se.y0 >= se.y1 do sy = -1
+    
+	err := dx + dy
+    
+	x := se.x0
+	y := se.y0
+    
+	for {
+		circle_brush_spawn(world, x, y, se.r, se.material)
+    
+		if x == se.x1 && y == se.y1 {
+			break
+		}
+    
+		e2 := 2 * err
+    
+		if e2 >= dy {
+			err += dy
+			x += sx
+		}
+    
+		if e2 <= dx {
+			err += dx
+			y += sy
 		}
 	}
 }
@@ -137,7 +172,7 @@ update_row :: proc(world: ^World, x, y: int) {
 	vy := world.vel_y
 	grid := world.grid
 	active := world.active
-	if grid[now] == .Empty || grid[now] == .Cement { 	// skip expensive calc for empty cell immediately 
+	if grid[now] == .Empty || grid[now] == .Cement { 	// skip expensive calc for empty cell immediately
 		// reset velocity for empty cell to 0. This is just a guardrail, normally every moved cell will set their old vel to 0
 		// build_pixel already handle render empty pixel so no need to set here
 		active[now] = false
@@ -181,12 +216,12 @@ move_diagonal :: proc(world: ^World, x, y: int) -> bool {
 			side *= -1
 		}
 		to := idx(x + side, y + 1)
-		if is_solid(grid, to) || is_solid(grid, idx(x+side, y)) {
+		if is_solid(grid, to) || is_solid(grid, idx(x + side, y)) {
 			continue
 		}
 		vx[to] = vx[now] * DIAGONAL_X_TRANSFER
 		vy[to] = vy[now] * DIAGONAL_Y_TRANSFER
-		wake_neighbor(world, x+side, y+1, 1)
+		wake_neighbor(world, x + side, y + 1, 1)
 		move_cell(world, to, now)
 		return true
 	}
@@ -197,7 +232,7 @@ move_horizontal :: proc(world: ^World, x, y: int) -> bool {
 	now := idx(x, y)
 	vx := world.vel_x
 	vy := world.vel_y
-	if abs(vx[now]) < X_THRESHOLD  do return false
+	if abs(vx[now]) < X_THRESHOLD do return false
 	side := 1
 	if vx[now] < 0 {
 		side = -1
@@ -205,7 +240,7 @@ move_horizontal :: proc(world: ^World, x, y: int) -> bool {
 	if is_outside(x + side, y) do return false
 	to := idx(x + side, y)
 	if is_solid(world.grid, to) do return false
-	wake_neighbor(world, x+side, y, 1)
+	wake_neighbor(world, x + side, y, 1)
 	vx[to] = vx[now] * HORIZONTAL_X_TRANSFER
 	vy[to] = vy[now] * HORIZONTAL_Y_TRANSFER
 	move_cell(world, to, now)
