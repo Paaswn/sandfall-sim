@@ -71,7 +71,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
 }
-// only move material, and color
+// only move material, color, and reset old position values
 // **doesn't move velocity**
 move_cell :: proc(world: ^World, to, now: int) {
 	world.grid[to] = world.grid[now]
@@ -181,7 +181,7 @@ move_diagonal :: proc(world: ^World, x, y: int) -> bool {
 			side *= -1
 		}
 		to := idx(x + side, y + 1)
-		if is_solid(grid, to) {
+		if is_solid(grid, to) || is_solid(grid, idx(x+side, y)) {
 			continue
 		}
 		vx[to] = vx[now] * DIAGONAL_X_TRANSFER
