@@ -11,17 +11,19 @@ build_pixel_buf :: proc(world: ^World, buf: []rl.Color) {
 		})
 	case .Velocity_Y:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^World) {
-			buf[idx] = random_color_vel(world.vel_y[idx])
+			buf[idx] = get_vel_color(world.vel_y[idx])
 		})
 	case .Velocity_X:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^World) {
-			buf[idx] = random_color_vel(world.vel_x[idx])
+			buf[idx] = get_vel_color(world.vel_x[idx])
 		})
 
 	case .Active_Cell:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^World) {
 			if world.active[idx] {
 				buf[idx] = rl.GREEN
+			} else if world.grid[idx] == .Empty {
+			    buf[idx] = rl.BLACK
 			} else {
 				buf[idx] = rl.DARKGRAY
 			}
@@ -33,16 +35,10 @@ build_pixel_buf :: proc(world: ^World, buf: []rl.Color) {
 build_pixel :: proc(
 	world: ^World,
 	buf: []rl.Color,
-	fill_color: proc(idx: int, buf: []rl.Color, color: ^World),
+	fill_color: proc(idx: int, buf: []rl.Color, world: ^World),
 ) {
-	for cell, idx in world.grid {
-		switch cell {
-		case .Empty:
-			buf[idx] = rl.BLACK
-
-		case .Sand:
-			fill_color(idx, buf, world)
-		}
+	for _, idx in world.grid {
+		fill_color(idx, buf, world)
 	}
 }
 
@@ -61,7 +57,7 @@ render_brush :: proc(mx, my: int) {
 			dist2 := dx * dx + dy * dy
 			outer := spawn_radius * spawn_radius
 			inner := (spawn_radius - 1) * (spawn_radius - 1)
-			if dist2 <= outer && dist2 >= inner {
+			if dist2 < outer && dist2 >= inner {
 				rl.DrawRectangle(i32(x * SCALE), i32(y * SCALE), i32(SCALE), i32(SCALE), rl.WHITE)
 			}
 		}
@@ -71,18 +67,20 @@ render_brush :: proc(mx, my: int) {
 get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> rl.Color {
 	color: rl.Color
 	switch mat {
+	case .Cement:
+	    color = random_shade(get_material_base_color(mat), x, y, 20, salt)
 	case .Sand:
-		color = random_shade(rl.BEIGE, x, y, 20, salt)
+		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
 	case .Empty:
 		color = rl.BLACK
 	}
 	return color
 }
 
-random_color_vel :: proc(vel: f32) -> rl.Color {
+get_vel_color :: proc(vel: f32) -> rl.Color {
 	value := abs(vel / MAX_STEP_Y)
 	new_r := u8(math.clamp(int(value * 255), 0, 255))
-	return rl.Color{new_r, 20, 20, 255}
+	return rl.Color{new_r, 0, 0, 255}
 }
 random_shade :: proc(base: rl.Color, x, y, variance: int, salt: u64) -> rl.Color {
 	// 1. Generate a single random offset for uniform shading
@@ -101,4 +99,17 @@ get_new_color :: proc(base: rl.Color, offset: int) -> rl.Color {
 	new_b := u8(math.clamp(int(base.b) + offset, 0, 255))
 
 	return rl.Color{new_r, new_g, new_b, base.a}
+}
+
+get_material_base_color :: proc(mat: Material) -> rl.Color{
+    to_return : rl.Color
+    switch mat {
+    case .Empty:
+        to_return = rl.BLACK
+    case .Sand:
+        to_return = rl.BEIGE
+    case .Cement:
+        to_return = rl.DARKGRAY
+    }
+    return to_return
 }

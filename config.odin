@@ -14,6 +14,7 @@ Action :: enum {
 	Debug_Active_Cell,
 	Select_Sand,
 	Select_Empty,
+	Select_Cement
 }
 Modifier_Key :: enum {
 	None,
@@ -33,6 +34,7 @@ KEY_BINDS :: [Action]Input {
 	.Debug_Active_Cell = {.FOUR, {.Ctrl}},
 	.Select_Sand       = {.TWO, {.None}},
 	.Select_Empty      = {.ONE, {.None}},
+	.Select_Cement     = {.THREE, {.None}},
 }
 // runtime config
 debug_mode := Debug.Off
@@ -43,12 +45,12 @@ spawn_radius := 4
 DT: f64 : 1.0 / 60.0
 WIDTH :: 480
 HEIGHT :: 270
-GRAVITY: f32 : 36
+GRAVITY: f32 : 50
 SCALE :: 4
 // sand constant
 MAX_STEP_Y :: 8
 
-X_THRESHOLD :: 1.0
+X_THRESHOLD :: 0.25
 MAX_VX :: 2.5
 MAX_VY :: 8.0
 
@@ -59,4 +61,4 @@ IMPACT_TO_SIDE :: 0.20
 NEIGHBOR_TRANSFER :: 0.04
 FALL_DRAG_TRANSFER :: 0.02
 
-SLEEP_EPSILON :: 0.40
+SLEEP_EPSILON :: 0.1

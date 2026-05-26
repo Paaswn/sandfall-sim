@@ -24,8 +24,8 @@ Spawn_Event :: struct {
 
 
 event_listener :: proc(world: ^World, events: ^Event_Queues) {
-	for es in events.spawn {
-		circle_brush_spawn(world, es)
+	for se in events.spawn {
+		circle_brush_spawn(world, se)
 	}
 	for ee in events.explode {
 		explosion(world, ee)
@@ -81,6 +81,8 @@ track_kb :: proc() {
 			current_mat = .Sand
 		case .Select_Empty:
 			current_mat = .Empty
+		case .Select_Cement:
+			current_mat = .Cement
 		}
 	}
 }
@@ -106,8 +108,8 @@ cursor_size_handler :: proc() {
 		spawn_radius += 1
 	} else if rl.IsKeyDown(.LEFT_CONTROL) && rl.GetMouseWheelMove() < 0 {
 		spawn_radius -= 1
-		if spawn_radius <= 0 {
-			spawn_radius = 0
+		if spawn_radius <= 1 {
+			spawn_radius = 1
 		}
 	}
 }

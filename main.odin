@@ -1,7 +1,7 @@
 package main
 
 import rl "vendor:raylib"
-
+T_Scale :: 1
 main :: proc() {
 	// events queue init
 	events := make_event_queues()
@@ -15,6 +15,7 @@ main :: proc() {
 	defer delete(pixel_buf)
 	// raylib window init
 	rl.InitWindow(WIDTH * SCALE, HEIGHT * SCALE, "sandfall")
+	rl.SetTargetFPS(120)
 	rl.HideCursor()
 	image := rl.GenImageColor(WIDTH, HEIGHT, rl.BLACK)
 	texture := rl.LoadTextureFromImage(image)
@@ -28,7 +29,7 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		now := rl.GetTime()
 		dt := now - prev
-		acc += dt
+		acc += dt * T_Scale
 		prev = now
 		track_mouse(&events)
 		track_kb()
