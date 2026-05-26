@@ -160,8 +160,8 @@ update_row :: proc(world: ^World, x, y: int) {
 	if move_down(world, x, y) do return
 	if move_diagonal(world, x, y) do return
 	if move_horizontal(world, x, y) do return
-	vy[now] *= 0.5
-	vx[now] *= 0.5
+	vy[now] *= RESTING_DAMPING
+	vx[now] *= RESTING_DAMPING
 }
 
 move_diagonal :: proc(world: ^World, x, y: int) -> bool {
@@ -184,8 +184,8 @@ move_diagonal :: proc(world: ^World, x, y: int) -> bool {
 		if is_solid(grid, to) {
 			continue
 		}
-		vx[to] = vx[now] * 0.6
-		vy[to] = vy[now] * 0.5
+		vx[to] = vx[now] * DIAGONAL_X_TRANSFER
+		vy[to] = vy[now] * DIAGONAL_Y_TRANSFER
 		wake_neighbor(world, x+side, y+1, 1)
 		move_cell(world, to, now)
 		return true
@@ -206,8 +206,8 @@ move_horizontal :: proc(world: ^World, x, y: int) -> bool {
 	to := idx(x + side, y)
 	if is_solid(world.grid, to) do return false
 	wake_neighbor(world, x+side, y, 1)
-	vx[to] = vx[now] * 0.2
-	vy[to] = vy[now] * 0.2
+	vx[to] = vx[now] * HORIZONTAL_X_TRANSFER
+	vy[to] = vy[now] * HORIZONTAL_Y_TRANSFER
 	move_cell(world, to, now)
 	return false
 }
@@ -223,23 +223,23 @@ move_down :: proc(world: ^World, x, y: int) -> bool {
 		next_y := y + s
 		if is_outside(x, next_y) {
 			if random_side() > 0 {
-				vx[now] += vy[now] * 0.9
+				vx[now] += vy[now] * IMPACT_TO_SIDE
 			} else {
-				vx[now] -= vy[now] * 0.9
+				vx[now] -= vy[now] * IMPACT_TO_SIDE
 			}
-			vy[now] *= 0.5
+			vy[now] *= Y_DAMP_ON_HIT
 			break
 		}
 		next := idx(x, next_y)
 		if is_solid(grid, next) { 	// in case we stuck we will transfer energy right here
 			if random_side() > 0 {
-				vx[next] += vy[now] * 0.3
-				vx[now] += vy[now] * 0.9
+				vx[next] += vy[now] * NEIGHBOR_TRANSFER
+				vx[now] += vy[now] * IMPACT_TO_SIDE
 			} else {
-				vx[next] -= vy[now] * 0.3
-				vx[now] -= vy[now] * 0.9
+				vx[next] -= vy[now] * NEIGHBOR_TRANSFER
+				vx[now] -= vy[now] * IMPACT_TO_SIDE
 			}
-			vy[now] *= 0.5
+			vy[now] *= Y_DAMP_ON_HIT
 			break
 		}
 		wake_neighbor(world, x, next_y, 1)
