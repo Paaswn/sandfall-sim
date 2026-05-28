@@ -1,23 +1,25 @@
 package main
 
+import sim "simulation"
 import rl "vendor:raylib"
-T_Scale :: 1
+
 main :: proc() {
 	// events queue init
-	events := make_event_queues()
-	defer delete_event_queues(&events)
+	events := sim.make_event_queues()
+	defer sim.delete_event_queues(&events)
 
 	// world init
-	world := create_world()
-	defer delete_world(&world)
+	world := sim.create_world()
+	defer sim.delete_world(&world)
 
-	pixel_buf := make([]rl.Color, WIDTH*HEIGHT)
+	pixel_buf := make([]rl.Color, sim.WIDTH * sim.HEIGHT)
 	defer delete(pixel_buf)
 	// raylib window init
-	rl.InitWindow(WIDTH * SCALE, HEIGHT * SCALE, "sandfall")
+	rl.InitWindow(sim.WIDTH * sim.SCALE, sim.HEIGHT * sim.SCALE, "sandfall")
 	rl.SetTargetFPS(120)
 	rl.HideCursor()
-	image := rl.GenImageColor(WIDTH, HEIGHT, rl.BLACK)
+	// create a texture buffer
+	image := rl.GenImageColor(sim.WIDTH, sim.HEIGHT, rl.BLACK)
 	texture := rl.LoadTextureFromImage(image)
 	rl.UnloadImage(image)
 	defer rl.UnloadTexture(texture)
@@ -29,24 +31,24 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		now := rl.GetTime()
 		dt := now - prev
-		acc += dt * T_Scale
+		acc += dt * sim.t_scale
 		prev = now
-		track_mouse(&events)
-		track_kb()
-		for acc >= DT {
+		sim.track_mouse(&events)
+		sim.track_kb()
+		for acc >= sim.DT {
 			tick += 1
 			if tick == 3 do tick = 1
-			event_listener(&world, &events)
-			update(&world, tick)
-			acc -= DT
+			sim.event_listener(&world, &events)
+			sim.update(&world, tick)
+			acc -= sim.DT
 		}
 		build_pixel_buf(&world, pixel_buf)
 		rl.UpdateTexture(texture, raw_data(pixel_buf))
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
-		rl.DrawTextureEx(texture, {0, 0}, 0, SCALE, rl.WHITE)
-		render_brush(int(rl.GetMouseX() / SCALE), int(rl.GetMouseY() / SCALE))
-		rl.DrawFPS(10,10)
+		rl.DrawTextureEx(texture, {0, 0}, 0, sim.SCALE, rl.WHITE)
+		render_brush(int(rl.GetMouseX() / sim.SCALE), int(rl.GetMouseY() / sim.SCALE))
+		rl.DrawFPS(10, 10)
 		rl.EndDrawing()
 	}
 }

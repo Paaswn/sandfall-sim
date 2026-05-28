@@ -1,4 +1,4 @@
-package main
+package simulation
 
 import "core:fmt"
 import "core:math"
@@ -63,34 +63,34 @@ circle_brush_spawn :: proc(world: ^World, ox, oy, r: int, material: Material) {
 	}
 }
 brush_spawn :: proc(world: ^World, se: Spawn_Event) {
-    dx := abs(se.x1 - se.x0)
+	dx := abs(se.x1 - se.x0)
 	dy := -abs(se.y1 - se.y0)
-    
+
 	sx := 1
 	if se.x0 >= se.x1 do sx = -1
-    
+
 	sy := 1
 	if se.y0 >= se.y1 do sy = -1
-    
+
 	err := dx + dy
-    
+
 	x := se.x0
 	y := se.y0
-    
+
 	for {
 		circle_brush_spawn(world, x, y, se.r, se.material)
-    
+
 		if x == se.x1 && y == se.y1 {
 			break
 		}
-    
+
 		e2 := 2 * err
-    
+
 		if e2 >= dy {
 			err += dy
 			x += sx
 		}
-    
+
 		if e2 <= dx {
 			err += dx
 			y += sy
@@ -107,6 +107,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.color[i] = get_material_color(material, x, y, total_spawn)
 }
 // only move material, color, and reset old position values
+//
 // **doesn't move velocity**
 move_cell :: proc(world: ^World, to, now: int) {
 	world.grid[to] = world.grid[now]
@@ -194,57 +195,9 @@ update_row :: proc(world: ^World, x, y: int) {
 	vy[now] += GRAVITY * f32(DT) // apply gravity to an active cell
 	if move_down(world, x, y) do return
 	if move_diagonal(world, x, y) do return
-	if move_horizontal(world, x, y) do return
+	if move_side(world, x, y) do return
 	vy[now] *= RESTING_DAMPING
 	vx[now] *= RESTING_DAMPING
-}
-
-move_diagonal :: proc(world: ^World, x, y: int) -> bool {
-	// check for diagnal movement first
-	vy := world.vel_y
-	vx := world.vel_x
-	now := idx(x, y)
-	grid := world.grid
-	if vx[now] < X_THRESHOLD do return false
-	// probably could flag as inactive here
-	if is_outside(x - 1, y + 1) || is_outside(x + 1, y + 1) do return false
-
-	// then randomly choose falling direction
-	side := random_side()
-	for try in 0 ..< 2 {
-		if try == 1 {
-			side *= -1
-		}
-		to := idx(x + side, y + 1)
-		if is_solid(grid, to) || is_solid(grid, idx(x + side, y)) {
-			continue
-		}
-		vx[to] = vx[now] * DIAGONAL_X_TRANSFER
-		vy[to] = vy[now] * DIAGONAL_Y_TRANSFER
-		wake_neighbor(world, x + side, y + 1, 1)
-		move_cell(world, to, now)
-		return true
-	}
-	return false
-}
-
-move_horizontal :: proc(world: ^World, x, y: int) -> bool {
-	now := idx(x, y)
-	vx := world.vel_x
-	vy := world.vel_y
-	if abs(vx[now]) < X_THRESHOLD do return false
-	side := 1
-	if vx[now] < 0 {
-		side = -1
-	}
-	if is_outside(x + side, y) do return false
-	to := idx(x + side, y)
-	if is_solid(world.grid, to) do return false
-	wake_neighbor(world, x + side, y, 1)
-	vx[to] = vx[now] * HORIZONTAL_X_TRANSFER
-	vy[to] = vy[now] * HORIZONTAL_Y_TRANSFER
-	move_cell(world, to, now)
-	return false
 }
 
 move_down :: proc(world: ^World, x, y: int) -> bool {
@@ -303,40 +256,6 @@ wake_neighbor :: proc(world: ^World, origin_x, origin_y, off: int) {
 	}
 }
 
-// deprecated
-explosion :: proc(world: ^World, ee: Explosion_Event) {
-	vx := world.vel_x
-	vy := world.vel_y
-	for x in ee.x - ee.r ..= ee.x + ee.r {
-		for y in ee.y - ee.r ..= ee.y + ee.r {
-			if is_outside(x, y) {
-				continue
-			}
-			dx := x - ee.x
-			dy := y - ee.y
-			dist_sq := dx * dx + dy * dy
-			if dist_sq > 0 && dist_sq <= ee.r * ee.r {
-				i := idx(x, y)
-				if world.grid[i] != .Empty {
-					dist := math.sqrt(f32(dist_sq))
-					dir_x := f32(dx) / dist
-					dir_y := f32(dy) / dist
-					falloff := 1.0 - dist / f32(ee.r)
-					weighted_force := ee.force * falloff
-					vx[i] += dir_x * weighted_force
-					vy[i] += dir_y * weighted_force
-				}
-			}
-			if dist_sq > 0 && dist_sq <= ee.r * ee.r / 4 {
-				i := idx(x, y)
-				if world.grid[i] != .Empty {
-					world.grid[i] = .Empty
-				}
-			}
-		}
-	}
-}
-
 is_solid :: proc(grid: []Material, idx: int) -> bool {
 	return grid[idx] == .Sand || grid[idx] == .Cement
 }
@@ -346,4 +265,50 @@ is_solid_and_sleep :: proc(active: []bool, grid: []Material, idx: int) -> bool {
 }
 random_side :: proc() -> int {
 	return int(rand.uint32() & 1) * 2 - 1
+}
+
+get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> rl.Color {
+	color: rl.Color
+	switch mat {
+	case .Cement:
+		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
+	case .Sand:
+		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
+	case .Empty:
+		color = rl.BLACK
+	}
+	return color
+}
+
+get_material_base_color :: proc(mat: Material) -> rl.Color {
+	to_return: rl.Color
+	switch mat {
+	case .Empty:
+		to_return = rl.BLACK
+	case .Sand:
+		to_return = rl.BEIGE
+	case .Cement:
+		to_return = rl.DARKGRAY
+	}
+	return to_return
+}
+
+random_shade :: proc(base: rl.Color, x, y, variance: int, salt: u64) -> rl.Color {
+	// 1. Generate a single random offset for uniform shading
+	// If variance is 30, offset will be between -30 and +30
+	hash := (x * 73856093) ~ (y * 19349663) ~ int((salt * 83492791))
+
+	offset := (hash % (variance * 2 + 1)) - variance
+
+	// 2. Apply offset and clamp values between 0 and 255 to prevent integer overflow
+	return get_new_color(base, offset)
+}
+
+get_new_color :: proc(base: rl.Color, offset: int) -> rl.Color {
+
+	new_r := u8(math.clamp(int(base.r) + offset, 0, 255))
+	new_g := u8(math.clamp(int(base.g) + offset, 0, 255))
+	new_b := u8(math.clamp(int(base.b) + offset, 0, 255))
+
+	return rl.Color{new_r, new_g, new_b, base.a}
 }

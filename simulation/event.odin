@@ -1,4 +1,4 @@
-package main
+package simulation
 
 import "core:fmt"
 import rl "vendor:raylib"
@@ -24,13 +24,9 @@ Spawn_Event :: struct {
 	material: Material,
 }
 
-
 event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	for se in events.spawn {
 		brush_spawn(world, se)
-	}
-	for ee in events.explode {
-		explosion(world, ee)
 	}
 	clear_queues(events)
 }
@@ -43,7 +39,6 @@ track_mouse :: proc(events: ^Event_Queues) {
 	mouse_scale_y := int(rl.GetMouseY() / SCALE)
 	material_spawn_handler(&events.spawn, mouse_scale_x, mouse_scale_y, current_mat)
 	explosion_event_handler(&events.explode, mouse_scale_x, mouse_scale_y, 1)
-	cursor_size_handler()
 }
 
 track_kb :: proc() {
@@ -70,7 +65,9 @@ track_kb :: proc() {
 				}
 			}
 		}
-		if !rl.IsKeyPressed(input.trigger) {
+		if input.mouse_wheel > 0 && rl.GetMouseWheelMove() < 0 do continue
+		if input.mouse_wheel < 0 && rl.GetMouseWheelMove() > 0 do continue
+		if !rl.IsKeyPressed(input.trigger) && input.trigger != .KEY_NULL {
 			continue
 		}
 		switch action {
@@ -88,6 +85,21 @@ track_kb :: proc() {
 			current_mat = .Empty
 		case .Select_Cement:
 			current_mat = .Cement
+		case .Increase_Tick:
+			t_scale += 0.1
+			if t_scale >= 1 {
+				t_scale = 1
+			}
+		case .Decrease_Tick:
+			t_scale -= 0.1
+			if t_scale <= 0.1 {
+				t_scale = 0.1
+			}
+		case .Increase_Brush_Size:
+			spawn_radius += 1
+		case .Decrease_Brush_Size:
+			spawn_radius -= 1
+			if spawn_radius <= 1 do spawn_radius = 1
 		}
 	}
 }
@@ -115,16 +127,6 @@ material_spawn_handler :: proc(spawn: ^[dynamic]Spawn_Event, msx, msy: int, mat:
 	} else do has_prev_mouse = false
 }
 
-cursor_size_handler :: proc() {
-	if rl.IsKeyDown(.LEFT_CONTROL) && rl.GetMouseWheelMove() > 0 {
-		spawn_radius += 1
-	} else if rl.IsKeyDown(.LEFT_CONTROL) && rl.GetMouseWheelMove() < 0 {
-		spawn_radius -= 1
-		if spawn_radius <= 1 {
-			spawn_radius = 1
-		}
-	}
-}
 
 make_event_queues :: proc() -> Event_Queues {
 	return Event_Queues{make([dynamic]Spawn_Event), make([dynamic]Explosion_Event)}
