@@ -4,15 +4,8 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 Event_Queues :: struct {
-	spawn:   [dynamic]Spawn_Event,
-	explode: [dynamic]Explosion_Event,
-}
-
-Explosion_Event :: struct {
-	x:     int,
-	y:     int,
-	r:     int,
-	force: f32,
+	spawn:      [dynamic]Spawn_Event,
+	spawn_perm: map[int]Spawn_Point,
 }
 
 Spawn_Event :: struct {
@@ -24,9 +17,33 @@ Spawn_Event :: struct {
 	material: Material,
 }
 
+Spawn_Point :: struct {
+	point:    int,
+	x0:       int,
+	y0:       int,
+	r:        int,
+	material: Material,
+}
+
+make_event_queues :: proc() -> Event_Queues {
+	return Event_Queues{make([dynamic]Spawn_Event), make(map[int]Spawn_Point)}
+}
+
+delete_event_queues :: proc(queues: ^Event_Queues) {
+	delete(queues.spawn)
+	delete(queues.spawn_perm)
+}
+
+clear_queues :: proc(events: ^Event_Queues) {
+	clear(&events.spawn)
+}
+
 event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	for se in events.spawn {
 		brush_spawn(world, se)
+	}
+	for _, se in events.spawn_perm {
+		circle_brush_spawn(world, se.x0, se.y0, se.r, se.material)
 	}
 	clear_queues(events)
 }
@@ -34,15 +51,12 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 old_mouse_x: int
 old_mouse_y: int
 has_prev_mouse := false
-track_mouse :: proc(events: ^Event_Queues) {
-	mouse_scale_x := int(rl.GetMouseX() / SCALE)
-	mouse_scale_y := int(rl.GetMouseY() / SCALE)
+current_point := 0
+track_input :: proc(events: ^Event_Queues) {
+	mouse_scale_x := int(rl.GetMouseX() / Scale)
+	mouse_scale_y := int(rl.GetMouseY() / Scale)
 	material_spawn_handler(&events.spawn, mouse_scale_x, mouse_scale_y, current_mat)
-	explosion_event_handler(&events.explode, mouse_scale_x, mouse_scale_y, 1)
-}
-
-track_kb :: proc() {
-	actions: for input, action in KEY_BINDS {
+	actions: for input, action in Key_Binds {
 		for mod in input.modifer {
 			switch mod {
 			case .None:
@@ -85,6 +99,8 @@ track_kb :: proc() {
 			current_mat = .Empty
 		case .Select_Cement:
 			current_mat = .Cement
+		case .Select_Water:
+			current_mat = .Water
 		case .Increase_Tick:
 			t_scale += 0.1
 			if t_scale >= 1 {
@@ -100,18 +116,44 @@ track_kb :: proc() {
 		case .Decrease_Brush_Size:
 			spawn_radius -= 1
 			if spawn_radius <= 1 do spawn_radius = 1
+		case .Make_Spawn_Point:
+			for _, se in events.spawn_perm {
+				if intersect(
+					se.x0 - se.r,
+					se.y0 - se.r,
+					2 * se.r,
+					2 * se.r,
+					mouse_scale_x - spawn_radius,
+					mouse_scale_y - spawn_radius,
+					spawn_radius * 2,
+					spawn_radius * 2,
+				) {
+					current_point -= 1
+					delete_key(&events.spawn_perm, se.point)
+					return
+				}
+			}
+			current_point += 1
+			map_insert(
+				&events.spawn_perm,
+				current_point,
+				Spawn_Point {
+					current_point,
+					mouse_scale_x,
+					mouse_scale_y,
+					spawn_radius,
+					current_mat,
+				},
+			)
 		}
 	}
 }
 
-explosion_event_handler :: proc(expl: ^[dynamic]Explosion_Event, msx, msy: int, force: f32) {
-	if rl.IsMouseButtonDown(.LEFT) && select_explosive {
-		if len(expl) < 512 {
-			append(expl, Explosion_Event{msx, msy, spawn_radius, force})
-		}
-	}
+intersect :: proc(x0, y0, w0, h0, x1, y1, w1, h1: int) -> bool {
+	if x0 + w0 < x1 || x0 > x1 + w1 do return false
+	if y0 + h0 < y1 || y0 > y1 + h1 do return false
+	return true
 }
-
 material_spawn_handler :: proc(spawn: ^[dynamic]Spawn_Event, msx, msy: int, mat: Material) {
 	if rl.IsMouseButtonDown(.LEFT) && !select_explosive {
 		if len(spawn) < 512 {
@@ -125,19 +167,4 @@ material_spawn_handler :: proc(spawn: ^[dynamic]Spawn_Event, msx, msy: int, mat:
 			old_mouse_y = msy
 		}
 	} else do has_prev_mouse = false
-}
-
-
-make_event_queues :: proc() -> Event_Queues {
-	return Event_Queues{make([dynamic]Spawn_Event), make([dynamic]Explosion_Event)}
-}
-
-delete_event_queues :: proc(queues: ^Event_Queues) {
-	delete(queues.explode)
-	delete(queues.spawn)
-}
-
-clear_queues :: proc(events: ^Event_Queues) {
-	clear(&events.explode)
-	clear(&events.spawn)
 }

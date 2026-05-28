@@ -10,23 +10,26 @@ World :: struct {
 	vel_y:  []f32,
 	grid:   []Material,
 	color:  []rl.Color,
-	active: []bool,
+	active: []bool, // will be depacrated to chunk
+	updated: []bool
 }
 
 Material :: enum u8 {
 	Empty,
 	Sand,
 	Cement,
+	Water,
 }
 
 create_world :: proc() -> World {
 
 	return World {
-		make([]f32, WIDTH * HEIGHT),
-		make([]f32, WIDTH * HEIGHT),
-		make([]Material, WIDTH * HEIGHT),
-		make([]rl.Color, WIDTH * HEIGHT),
-		make([]bool, WIDTH * HEIGHT),
+		make([]f32, Width * Height),
+		make([]f32, Width * Height),
+		make([]Material, Width * Height),
+		make([]rl.Color, Width * Height),
+		make([]bool, Width * Height),
+		make([]bool, Width * Height),
 	}
 }
 
@@ -36,15 +39,22 @@ delete_world :: proc(world: ^World) {
 	delete(world.grid)
 	delete(world.color)
 	delete(world.active)
+	delete(world.updated)
+}
+
+reset_updated :: proc(updated: []bool) {
+    for &cell, _ in updated {
+        cell = false
+    }
 }
 
 idx :: proc(x, y: int) -> int {
-	idx := y * WIDTH + x
+	idx := y * Width + x
 	return idx
 }
 
 is_outside :: proc(x, y: int) -> bool {
-	return x < 0 || y < 0 || x > WIDTH - 1 || y > HEIGHT - 1
+	return x < 0 || y < 0 || x > Width - 1 || y > Height - 1
 }
 
 
@@ -103,17 +113,22 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
 	total_spawn += 1
+	world.active[i] = true
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
 }
-// only move material, color, and reset old position values
+// only move material, color, active state, and reset old position values
 //
 // **doesn't move velocity**
 move_cell :: proc(world: ^World, to, now: int) {
-	world.grid[to] = world.grid[now]
+    world.updated[to] = true
+    world.updated[now] = true
+    world.grid[to] = world.grid[now]
 	world.color[to] = world.color[now]
+	world.active[to] = world.active[now]
 	world.grid[now] = .Empty
 	world.color[now] = get_material_base_color(.Empty)
+	world.active[now] = false
 	world.vel_x[now] = 0
 	world.vel_y[now] = 0
 }
@@ -124,9 +139,12 @@ cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
 	grid := world.grid
 	active := world.active
 	now := idx(x, y)
+	if is_liquid(grid, now) {
+		return false
+	}
 	// check cell speed
 	vel_sqr := vx[now] * vx[now] + vy[now] * vy[now]
-	if vel_sqr > SLEEP_EPSILON {
+	if vel_sqr > Sleep_Epsilon {
 		return false
 	}
 	// if below is border go to sleep
@@ -154,26 +172,28 @@ cell_should_sleep :: proc(world: ^World, x, y: int) -> bool {
 
 }
 update :: proc(world: ^World, tick: int) {
-	for y := HEIGHT - 1; y >= 0; y -= 1 {
+    reset_updated(world.updated)
+    for y := Height - 1; y >= 0; y -= 1 {
 		if tick % 2 == 0 {
-			for x := 0; x < WIDTH; x += 1 {
-				update_row(world, x, y)
+			for x := 0; x < Width; x += 1 {
+				update_cell(world, x, y)
 			}
 		} else {
-			for x := WIDTH - 1; x >= 0; x -= 1 {
-				update_row(world, x, y)
+			for x := Width - 1; x >= 0; x -= 1 {
+				update_cell(world, x, y)
 			}
 		}
 	}
 }
 
-update_row :: proc(world: ^World, x, y: int) {
+update_cell :: proc(world: ^World, x, y: int) {
 	now := idx(x, y) // always in border no need to check
 	vx := world.vel_x
 	vy := world.vel_y
 	grid := world.grid
 	active := world.active
-	if grid[now] == .Empty || grid[now] == .Cement { 	// skip expensive calc for empty cell immediately
+	// if world.updated[now] do return
+	if ( grid[now] == .Empty || grid[now] == .Cement ) { 	// skip expensive calc for empty cell immediately
 		// reset velocity for empty cell to 0. This is just a guardrail, normally every moved cell will set their old vel to 0
 		// build_pixel already handle render empty pixel so no need to set here
 		active[now] = false
@@ -192,62 +212,29 @@ update_row :: proc(world: ^World, x, y: int) {
 		active[now] = false
 		return
 	}
-	vy[now] += GRAVITY * f32(DT) // apply gravity to an active cell
-	if move_down(world, x, y) do return
-	if move_diagonal(world, x, y) do return
-	if move_side(world, x, y) do return
-	vy[now] *= RESTING_DAMPING
-	vx[now] *= RESTING_DAMPING
+	below := idx(x, y + 1)
+	if !is_outside(x, y + 1) && is_empty(grid, below) {
+		vy[now] += Gravity * f32(Dt) // apply gravity to an active cell
+	}
+	#partial switch grid[now] {
+	case .Sand:
+		if move_down(world, x, y) do return // move down happen to all material type except one above
+		if move_diagonal(world, x, y) do return
+		if move_side(world, x, y) do return
+		vy[now] *= Resting_Damping
+		vx[now] *= Resting_Damping
+	case .Water:
+		if liquid_move_down(world, x, y) do return
+		if liquid_move_side(world, x, y) do return
+	}
 }
 
-move_down :: proc(world: ^World, x, y: int) -> bool {
-	vy := world.vel_y
-	vx := world.vel_x
-	now := idx(x, y)
-	grid := world.grid
-	steps := int(math.clamp(vy[now], 1, MAX_STEP_Y))
-	target_y := y
-	for s in 1 ..= steps {
-		next_y := y + s
-		if is_outside(x, next_y) {
-			if random_side() > 0 {
-				vx[now] += vy[now] * IMPACT_TO_SIDE
-			} else {
-				vx[now] -= vy[now] * IMPACT_TO_SIDE
-			}
-			vy[now] *= Y_DAMP_ON_HIT
-			break
-		}
-		next := idx(x, next_y)
-		if is_solid(grid, next) { 	// in case we stuck we will transfer energy right here
-			if random_side() > 0 {
-				vx[next] += vy[now] * NEIGHBOR_TRANSFER
-				vx[now] += vy[now] * IMPACT_TO_SIDE
-			} else {
-				vx[next] -= vy[now] * NEIGHBOR_TRANSFER
-				vx[now] -= vy[now] * IMPACT_TO_SIDE
-			}
-			vy[now] *= Y_DAMP_ON_HIT
-			break
-		}
-		wake_neighbor(world, x, next_y, 1)
-		target_y = next_y
-	}
-	if target_y != y {
-		to := idx(x, target_y)
-		vy[to] = vy[now]
-		vx[to] = vx[now]
-		move_cell(world, to, now)
-		return true
-	}
-	return false
-}
 
 wake_neighbor :: proc(world: ^World, origin_x, origin_y, off: int) {
 	sx := math.max(0, origin_x - off)
 	sy := math.max(0, origin_y - off)
-	ex := math.min(WIDTH - 1, origin_x + off)
-	ey := math.min(HEIGHT - 1, origin_y + off)
+	ex := math.min(Width - 1, origin_x + off)
+	ey := math.min(Height - 1, origin_y + off)
 	for y in sy ..= ey {
 		for x in sx ..= ex {
 			check := idx(x, y)
@@ -257,7 +244,7 @@ wake_neighbor :: proc(world: ^World, origin_x, origin_y, off: int) {
 }
 
 is_solid :: proc(grid: []Material, idx: int) -> bool {
-	return grid[idx] == .Sand || grid[idx] == .Cement
+	return grid[idx] == .Sand || grid[idx] == .Cement || grid[idx] == .Water
 }
 
 is_solid_and_sleep :: proc(active: []bool, grid: []Material, idx: int) -> bool {
@@ -274,6 +261,8 @@ get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> rl.Color {
 		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
 	case .Sand:
 		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
+	case .Water:
+		color = random_shade(get_material_base_color(mat), x, y, 10, 0)
 	case .Empty:
 		color = rl.BLACK
 	}
@@ -289,6 +278,9 @@ get_material_base_color :: proc(mat: Material) -> rl.Color {
 		to_return = rl.BEIGE
 	case .Cement:
 		to_return = rl.DARKGRAY
+	case .Water:
+		to_return = rl.BLUE
+
 	}
 	return to_return
 }
@@ -311,4 +303,12 @@ get_new_color :: proc(base: rl.Color, offset: int) -> rl.Color {
 	new_b := u8(math.clamp(int(base.b) + offset, 0, 255))
 
 	return rl.Color{new_r, new_g, new_b, base.a}
+}
+
+is_empty :: proc(grid: []Material, idx: int) -> bool {
+	return grid[idx] == .Empty
+}
+
+is_liquid :: proc(grid: []Material, idx: int) -> bool {
+	return grid[idx] == .Water
 }
