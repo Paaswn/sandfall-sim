@@ -1,0 +1,40 @@
+package simulation
+Chunk :: struct {
+	last_updated_tick: u64,
+	active_next:       bool,
+	active:            bool,
+}
+
+chunk_idx_by_cpos :: proc(x, y: int) -> int {
+	return y * Width_Chunk + x
+}
+
+chunk_idx_by_wpos :: proc(x, y: int) -> int {
+	cx, cy := to_chunk_pos(x, y)
+	return cy * Width_Chunk + cx
+}
+
+get_chunk_by_cidx :: proc(chunks: []Chunk, idx: int) -> ^Chunk {
+	return &chunks[idx]
+}
+
+get_chunk_by_wpos :: proc(chunks: []Chunk, x, y: int) -> ^Chunk {
+	return &chunks[chunk_idx_by_wpos(x, y)]
+}
+get_chunk :: proc {
+	get_chunk_by_cidx,
+	get_chunk_by_wpos,
+}
+
+to_chunk_pos :: proc(x, y: int) -> (int, int) {
+	return x / Chunk_Size, y / Chunk_Size
+}
+
+to_world_pos :: proc(cx, cy, x, y: int) -> (int, int) {
+	nx := cx * Chunk_Size + x
+	ny := cy * Chunk_Size + y
+	return nx, ny
+}
+
+wake_neighbor_chunk :: proc(world: ^World, origin_x, origin_y, off: int) {
+}
