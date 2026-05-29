@@ -5,13 +5,13 @@ Debug :: enum {
 	Off,
 	Velocity_Y,
 	Velocity_X,
-	Active_Cell,
+	Chunk,
 }
 Action :: enum {
 	Debug_Off,
 	Debug_Velocity_Y,
 	Debug_Velocity_X,
-	Debug_Active_Cell,
+	Debug_Chunk,
 	Select_Sand,
 	Select_Empty,
 	Select_Cement,
@@ -38,7 +38,7 @@ Key_Binds :: [Action]Input {
 	.Debug_Off           = {0, .ONE, {.Ctrl}},
 	.Debug_Velocity_Y    = {0, .TWO, {.Ctrl}},
 	.Debug_Velocity_X    = {0, .THREE, {.Ctrl}},
-	.Debug_Active_Cell   = {0, .FOUR, {.Ctrl}},
+	.Debug_Chunk         = {0, .FOUR, {.Ctrl}},
 	.Select_Sand         = {0, .TWO, {.None}},
 	.Select_Empty        = {0, .ONE, {.None}},
 	.Select_Cement       = {0, .THREE, {.None}},
@@ -47,7 +47,7 @@ Key_Binds :: [Action]Input {
 	.Increase_Brush_Size = {1, .KEY_NULL, {.Ctrl}},
 	.Decrease_Brush_Size = {-1, .KEY_NULL, {.Ctrl}},
 	.Select_Water        = {0, .FOUR, {.None}},
-	.Make_Spawn_Point  = {0, .F, {.None}},
+	.Make_Spawn_Point    = {0, .F, {.None}},
 }
 // runtime config
 debug_mode := Debug.Off
@@ -56,6 +56,10 @@ select_explosive := false
 spawn_radius := 4
 t_scale: f64 = 1
 // constant
+Chunk_Size :: 16
+Width_Chunk :: (480 + 15) / Chunk_Size
+Height_Chunk :: (270 + 15) / Chunk_Size
+Chunk_Idle_Thresh :: 4
 Dt: f64 : 1.0 / 60.0
 Width :: 480
 Height :: 270

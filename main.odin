@@ -27,7 +27,7 @@ main :: proc() {
 	// main loop
 	prev := rl.GetTime()
 	acc: f64 = 0
-	tick := 0
+	tick: u64 = 0
 	for !rl.WindowShouldClose() {
 		now := rl.GetTime()
 		dt := now - prev
@@ -36,7 +36,6 @@ main :: proc() {
 		sim.track_input(&events)
 		for acc >= sim.Dt {
 			tick += 1
-			if tick == 3 do tick = 1
 			sim.event_listener(&world, &events)
 			sim.update(&world, tick)
 			acc -= sim.Dt
@@ -46,6 +45,9 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
+		if sim.debug_mode == .Chunk {
+			render_debug_chunk(&world)
+		}
 		render_brush(int(rl.GetMouseX() / sim.Scale), int(rl.GetMouseY() / sim.Scale))
 		rl.DrawFPS(10, 10)
 		rl.EndDrawing()

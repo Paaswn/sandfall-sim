@@ -40,7 +40,7 @@ clear_queues :: proc(events: ^Event_Queues) {
 
 event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	for se in events.spawn {
-		brush_spawn(world, se)
+		brush_line(world, se)
 	}
 	for _, se in events.spawn_perm {
 		circle_brush_spawn(world, se.x0, se.y0, se.r, se.material)
@@ -91,8 +91,8 @@ track_input :: proc(events: ^Event_Queues) {
 			debug_mode = Debug.Velocity_Y
 		case .Debug_Velocity_X:
 			debug_mode = Debug.Velocity_X
-		case .Debug_Active_Cell:
-			debug_mode = Debug.Active_Cell
+		case .Debug_Chunk:
+			debug_mode = Debug.Chunk
 		case .Select_Sand:
 			current_mat = .Sand
 		case .Select_Empty:
