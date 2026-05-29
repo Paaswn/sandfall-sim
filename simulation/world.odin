@@ -13,11 +13,6 @@ World :: struct {
 	chunks: []Chunk,
 }
 
-Chunk :: struct {
-	last_updated_tick: u64,
-	active_next:       bool,
-	active:            bool,
-}
 Material :: enum u8 {
 	Empty,
 	Sand,
@@ -108,8 +103,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
 	cx, cy := to_chunk_pos(x, y)
-	get_chunk(world.chunks, chunk_idx(cx,cy)).active_next = true
-	fmt.println(cx, cy)
+	get_chunk(world.chunks, chunk_idx_by_cpos(cx, cy)).active_next = true
 	total_spawn += 1
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
@@ -126,14 +120,11 @@ move_cell :: proc(world: ^World, to, now: int) {
 	world.vel_y[now] = 0
 }
 
-chunk_idx :: proc(x, y: int) -> int {
-	return y * Width_Chunk + x
-}
 
 update :: proc(world: ^World, tick: u64) {
 	for cy := Height_Chunk - 1; cy >= 0; cy -= 1 {
 		for cx := 0; cx < Width_Chunk; cx += 1 {
-			chunk := get_chunk(world.chunks, chunk_idx(cx, cy))
+			chunk := get_chunk(world.chunks, chunk_idx_by_cpos(cx, cy))
 			chunk.active = chunk.active_next
 			if chunk.active {
 				update_chunk(world, chunk, cx, cy, tick)
@@ -144,22 +135,10 @@ update :: proc(world: ^World, tick: u64) {
 	}
 }
 
-get_chunk :: proc(chunks: []Chunk, idx: int) -> ^Chunk {
-	return &chunks[idx]
-}
-
-to_chunk_pos :: proc(x, y: int) -> (int, int) {
-    return x / Chunk_Size, y / Chunk_Size
-}
-
-to_world_pos :: proc(cx, cy, x, y: int) -> (int, int) {
-	nx := cx * Chunk_Size + x
-	ny := cy * Chunk_Size + y
-	return nx, ny
-}
 update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 	for y := Chunk_Size - 1; y >= 0; y -= 1 {
-		if tick % 2 == 0 {
+	if cy == Height_Chunk - 1 && y > Chunk_Size - 3 do continue
+	if tick % 2 == 0 {
 			for x := 0; x < Chunk_Size; x += 1 {
 				wx, wy := to_world_pos(cx, cy, x, y)
 				if update_cell(world, wx, wy) do chunk.last_updated_tick = tick
@@ -184,9 +163,6 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 	return false
 }
 
-
-wake_neighbor_chunk :: proc(world: ^World, origin_x, origin_y, off: int) {
-}
 
 is_dead :: proc(grid: []Material, idx: int) -> bool {
 	return grid[idx] == .Cement
