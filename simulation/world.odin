@@ -102,7 +102,8 @@ total_spawn: u64 = 0
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
-	wake_chunk(world.chunks, chunk_idx_by_wpos(x, y))
+	cx, cy := to_chunk_pos(x, y)
+	wake_chunk(world.chunks, cx, cy)
 	total_spawn += 1
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
@@ -136,16 +137,28 @@ update :: proc(world: ^World, tick: u64) {
 
 update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 	for y := Chunk_Size - 1; y >= 0; y -= 1 {
-	if cy == Height_Chunk - 1 && y > Chunk_Size - 4 do continue
-	if tick % 2 == 0 {
+		if cy == Height_Chunk - 1 && y > Chunk_Size - 4 do continue
+		if tick % 2 == 0 {
 			for x := 0; x < Chunk_Size; x += 1 {
 				wx, wy := to_world_pos(cx, cy, x, y)
-				if update_cell(world, wx, wy) do chunk.last_updated_tick = tick
+				cell := world.grid[idx(wx, wy)]
+				if update_cell(world, wx, wy) {
+					chunk.last_updated_tick = tick
+					if y == 0 && cell != world.grid[idx(wx, wy)] {
+						wake_chunk(world.chunks, cx, cy - 1)
+					}
+				}
 			}
 		} else {
 			for x := Width - 1; x >= 0; x -= 1 {
 				wx, wy := to_world_pos(cx, cy, x, y)
-				if update_cell(world, wx, wy) do chunk.last_updated_tick = tick
+				cell := world.grid[idx(wx, wy)]
+				if update_cell(world, wx, wy) {
+					chunk.last_updated_tick = tick
+					if y == 0 && cell != world.grid[idx(wx, wy)] {
+						wake_chunk(world.chunks, cx, cy - 1)
+					}
+				}
 			}
 		}
 	}

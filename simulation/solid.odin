@@ -6,6 +6,7 @@ drag_neighbor :: proc(world: ^World, source: f32, x, y: int) {
 
 }
 move_diagonal :: proc(world: ^World, x, y: int) -> bool {
+    
     return false
 }
 
@@ -26,8 +27,9 @@ move_down :: proc(world: ^World, x, y: int) -> bool {
     }
     if to_y != y {
         to := idx(x, to_y)
-        wake_neighbor_chunk(world.chunks, x, to_y, 1)
         vy[to] = vy[now]
+        cx, cy := to_chunk_pos(x, to_y)
+        wake_chunk(world.chunks, cx, cy)
         move_cell(world, to, now)
         return true
     }
