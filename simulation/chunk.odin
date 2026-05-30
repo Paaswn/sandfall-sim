@@ -39,22 +39,29 @@ to_world_pos :: proc(cx, cy, x, y: int) -> (int, int) {
 }
 
 is_chunk_outside :: proc(x, y: int) -> bool {
-    return x < 0 || x > Width_Chunk - 1 || y < 0 || y > Height_Chunk - 1
+	return x < 0 || x > Width_Chunk - 1 || y < 0 || y > Height_Chunk - 1
 }
 
 wake_neighbor_chunk :: proc(chunks: []Chunk, origin_x, origin_y, off: int) {
-    cx, cy := to_chunk_pos(origin_x, origin_y)
-    for y in cy - off ..= cy + off {
+	cx, cy := to_chunk_pos(origin_x, origin_y)
+	for y in cy - off ..= cy + off {
 		for x in cx - off ..= cx + off {
-			wake_chunk(chunks, x, y)
+			to_wake_chunk(chunks, x, y)
 		}
 	}
 }
 
-wake_chunk :: proc(chunks: []Chunk, cx, cy: int) {
-    x := math.clamp(cx, 0, Width_Chunk-1)
-    y := math.clamp(cy, 0, Height_Chunk-1)
-    idx := chunk_idx_by_cpos(x, y)
-    get_chunk(chunks, idx).active_next = true
+// auto clamping
+to_wake_chunk :: proc(chunks: []Chunk, cx, cy: int) {
+	x := math.clamp(cx, 0, Width_Chunk - 1)
+	y := math.clamp(cy, 0, Height_Chunk - 1)
+	idx := chunk_idx_by_cpos(x, y)
+	get_chunk(chunks, idx).active_next = true
 }
- 
+
+wake_chunk :: proc(chunks: []Chunk, cx, cy: int) {
+	x := math.clamp(cx, 0, Width_Chunk - 1)
+	y := math.clamp(cy, 0, Height_Chunk - 1)
+	idx := chunk_idx_by_cpos(x, y)
+	get_chunk(chunks, idx).active = true
+}
