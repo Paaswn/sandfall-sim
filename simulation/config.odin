@@ -54,13 +54,14 @@ debug_mode := Debug.Off
 current_mat := Material.Sand
 select_explosive := false
 spawn_radius := 4
-t_scale: f64 = 1
+T_Scales :[]f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
+t_scale: int = len(T_Scales) - 1 
 // constant
 Chunk_Size :: 16
 Width_Chunk :: (480 + 15) / Chunk_Size
 Height_Chunk :: (270 + 15) / Chunk_Size
 Max_Chunk_Idx :: Width_Chunk * Height_Chunk - 1
-Chunk_Idle_Thresh :: 4
+Chunk_Idle_Thresh :: 6
 Dt: f64 : 1.0 / 60.0
 Width :: 480
 Height :: 270

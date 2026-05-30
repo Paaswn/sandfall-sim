@@ -14,6 +14,7 @@ main :: proc() {
 
 	pixel_buf := make([]rl.Color, sim.Width * sim.Height)
 	defer delete(pixel_buf)
+	TS := sim.T_Scales
 	// raylib window init
 	rl.InitWindow(sim.Width * sim.Scale, sim.Height * sim.Scale, "sandfall")
 	rl.SetTargetFPS(120)
@@ -31,7 +32,7 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		now := rl.GetTime()
 		dt := now - prev
-		acc += dt * sim.t_scale
+		acc += dt * TS[sim.t_scale]
 		prev = now
 		sim.track_input(&events)
 		for acc >= sim.Dt {

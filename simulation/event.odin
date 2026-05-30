@@ -102,15 +102,11 @@ track_input :: proc(events: ^Event_Queues) {
 		case .Select_Water:
 			current_mat = .Water
 		case .Increase_Tick:
-			t_scale += 0.1
-			if t_scale >= 1 {
-				t_scale = 1
-			}
+			t_scale += 1
+			if t_scale >= len(T_Scales) - 1 do t_scale = len(T_Scales) - 1
 		case .Decrease_Tick:
-			t_scale -= 0.1
-			if t_scale <= 0.1 {
-				t_scale = 0.1
-			}
+			t_scale -= 1
+			if t_scale <= 0 do t_scale = 0
 		case .Increase_Brush_Size:
 			spawn_radius += 1
 		case .Decrease_Brush_Size:
