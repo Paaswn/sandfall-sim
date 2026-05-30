@@ -4,17 +4,20 @@ import "core:math"
 import sim "simulation"
 import rl "vendor:raylib"
 
-build_pixel_buf :: proc(world: ^sim.World, buf: []rl.Color) {
-	#partial switch sim.debug_mode {
+build_pixel_buf :: proc(game: ^Game) {
+	debug_mode := game.config.debug_mode
+	world := &game.world
+	buf := game.pixel_buf
+	#partial switch debug_mode {
 	case .Velocity_Y:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(world.vel_y[idx], sim.Max_Step_Y)
+			else do buf[idx] = get_vel_color(world.vel_y[idx], world.config.sand.max_vy)
 		})
 	case .Velocity_X:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(world.vel_x[idx], sim.Max_Step_X)
+			else do buf[idx] = get_vel_color(world.vel_x[idx], world.config.sand.max_vx)
 		})
 
 	case:
@@ -62,74 +65,75 @@ render_debug_chunk :: proc(world: ^sim.World) {
 		}
 	}
 }
-draw_rectangle :: proc(mx, my: int) {
-	y_start := my - sim.spawn_radius
-	y_end := my + sim.spawn_radius
-	x_start := mx - sim.spawn_radius
-	x_end := mx + sim.spawn_radius
-	for y in y_start ..= y_end {
-		for x in x_start ..= x_end {
-			if sim.is_outside(x, y) {
-				continue
-			}
-			if y == y_start || y == y_end || x == x_start || x == x_end {
-				rl.DrawRectangle(
-					i32(x * sim.Scale),
-					i32(y * sim.Scale),
-					i32(sim.Scale),
-					i32(sim.Scale),
-					rl.WHITE,
-				)
-			}
-		}
-	}
-}
+// draw_rectangle :: proc(brush_size: int, mouse.world.x, mouse.world.y: int) {
+// 	y_start := mouse.world.y - brush_size
+// 	y_end := mouse.world.y + brush_size
+// 	x_start := mouse.world.x - brush_size
+// 	x_end := mouse.world.x + brush_size
+// 	for y in y_start ..= y_end {
+// 		for x in x_start ..= x_end {
+// 			if sim.is_outside(x, y) {
+// 				continue
+// 			}
+// 			if y == y_start || y == y_end || x == x_start || x == x_end {
+// 				rl.DrawRectangle(
+// 					i32(x * sim.Scale),
+// 					i32(y * sim.Scale),
+// 					i32(sim.Scale),
+// 					i32(sim.Scale),
+// 					rl.WHITE,
+// 				)
+// 			}
+// 		}
+// 	}
+// }
 
-draw_pixelated_circle :: proc(mx, my: int) {
-	for y in my - sim.spawn_radius ..= my + sim.spawn_radius {
-		for x in mx - sim.spawn_radius ..= mx + sim.spawn_radius {
-			if sim.is_outside(x, y) {
-				continue
-			}
-			dx := x - mx
-			dy := y - my
-			dist2 := dx * dx + dy * dy
-			outer := sim.spawn_radius * sim.spawn_radius
-			inner := (sim.spawn_radius - 1) * (sim.spawn_radius - 1)
-			if dist2 < outer && dist2 >= inner {
-				rl.DrawRectangle(
-					i32(x * sim.Scale),
-					i32(y * sim.Scale),
-					i32(sim.Scale),
-					i32(sim.Scale),
-					rl.WHITE,
-				)
-			}
-		}
-	}
-}
+// draw_pixelated_circle :: proc(mouse.world.x, mouse.world.y: int) {
+//     for y in mouse.world.y - config.brush_size ..= mouse.world.y + config.brush_size {
+//         for x in mouse.world.x - config.brush_size ..= mouse.world.x + config.brush_size {
+// 			if sim.is_outside(x, y) {
+// 				continue
+// 			}
+// 			dx := x - mouse.world.x
+// 			dy := y - mouse.world.y
+// 			dist2 := dx * dx + dy * dy
+// 			outer := config.brush_size * config.brush_size
+// 			inner := (config.brush_size - 1) * (config.brush_size - 1)
+// 			if dist2 < outer && dist2 >= inner {
+// 				rl.DrawRectangle(
+// 					i32(x * sim.Scale),
+// 					i32(y * sim.Scale),
+// 					i32(sim.Scale),
+// 					i32(sim.Scale),
+// 					rl.WHITE,
+// 				)
+// 			}
+// 		}
+// 	}
+// }
 
-render_brush :: proc(mx, my: int) {
-	if sim.spawn_radius == 0 {
+render_brush :: proc(config: ^Game_Config, mouse: Mouse_State) {
+
+    if config.brush_size == 0 {
 		rl.DrawRectangle(
-			i32(mx * sim.Scale),
-			i32(my * sim.Scale),
+			i32(mouse.world.x * sim.Scale),
+			i32(mouse.world.y * sim.Scale),
 			i32(sim.Scale),
 			i32(sim.Scale),
 			rl.WHITE,
 		)
 		return
 	}
-	for y in my - sim.spawn_radius ..= my + sim.spawn_radius {
-		for x in mx - sim.spawn_radius ..= mx + sim.spawn_radius {
+	for y in mouse.world.y - config.brush_size ..= mouse.world.y + config.brush_size {
+		for x in mouse.world.x - config.brush_size ..= mouse.world.x + config.brush_size {
 			if sim.is_outside(x, y) {
 				continue
 			}
-			dx := x - mx
-			dy := y - my
+			dx := x - mouse.world.x
+			dy := y - mouse.world.y
 			dist2 := dx * dx + dy * dy
-			outer := sim.spawn_radius * sim.spawn_radius
-			inner := (sim.spawn_radius - 1) * (sim.spawn_radius - 1)
+			outer := config.brush_size * config.brush_size
+			inner := (config.brush_size - 1) * (config.brush_size - 1)
 			if dist2 < outer && dist2 >= inner {
 				rl.DrawRectangle(
 					i32(x * sim.Scale),

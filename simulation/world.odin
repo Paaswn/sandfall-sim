@@ -11,6 +11,11 @@ World :: struct {
 	grid:   []Material,
 	color:  []rl.Color,
 	chunks: []Chunk,
+	config: World_Config,
+}
+
+World_Config :: struct {
+	sand: Material_Config,
 }
 
 Material :: enum u8 {
@@ -20,14 +25,18 @@ Material :: enum u8 {
 	Water,
 }
 
-create_world :: proc() -> World {
+init_config :: proc() -> World_Config {
+	return World_Config{Material_Config{30.0, 1.0, 1.0, 8, 4, 0.5, 0.5, 0.3}}
+}
 
+create_world :: proc() -> World {
 	return World {
 		make([]f32, Width * Height),
 		make([]f32, Width * Height),
 		make([]Material, Width * Height),
 		make([]rl.Color, Width * Height),
 		make([]Chunk, Width * Height / Chunk_Size),
+		init_config(),
 	}
 }
 
@@ -62,47 +71,13 @@ circle_brush_spawn :: proc(world: ^World, ox, oy, r: int, material: Material) {
 	}
 }
 
-brush_line :: proc(world: ^World, se: Spawn_Event) {
-	dx := abs(se.x1 - se.x0)
-	dy := -abs(se.y1 - se.y0)
-
-	sx := 1
-	if se.x0 >= se.x1 do sx = -1
-
-	sy := 1
-	if se.y0 >= se.y1 do sy = -1
-
-	err := dx + dy
-
-	x := se.x0
-	y := se.y0
-
-	for {
-		circle_brush_spawn(world, x, y, se.r, se.material)
-
-		if x == se.x1 && y == se.y1 {
-			break
-		}
-
-		e2 := 2 * err
-
-		if e2 >= dy {
-			err += dy
-			x += sx
-		}
-
-		if e2 <= dx {
-			err += dx
-			y += sy
-		}
-	}
-}
 
 total_spawn: u64 = 0
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
 	cx, cy := to_chunk_pos(x, y)
+	to_wake_chunk(world.chunks, cx, cy - 1)
 	to_wake_chunk(world.chunks, cx, cy)
 	total_spawn += 1
 	world.grid[i] = material
@@ -142,26 +117,30 @@ update :: proc(world: ^World, tick: u64) {
 update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 	for y := Chunk_Size - 1; y >= 0; y -= 1 {
 		if cy == Height_Chunk - 1 && y > Chunk_Size - 4 do continue
-		if tick % 2 == 0 {
-			for x := 0; x < Chunk_Size; x += 1 {
-				wx, wy := to_world_pos(cx, cy, x, y)
-				cell := world.grid[idx(wx, wy)]
-				if update_cell(world, wx, wy) {
-					chunk.last_updated_tick = tick
-					if y == 0 && cell != world.grid[idx(wx, wy)] {
-						to_wake_chunk(world.chunks, cx, cy - 1)
-					}
+		start_x, end_x, step_x := 0, Chunk_Size, 1
+
+		if tick % 2 != 0 {
+			start_x = Chunk_Size - 1
+			end_x = -1
+			step_x = -1
+		}
+
+		for x := start_x; x != end_x; x += step_x {
+			wx, wy := to_world_pos(cx, cy, x, y)
+
+			before := world.grid[idx(wx, wy)]
+
+			if update_cell(world, wx, wy) {
+				chunk.last_updated_tick = tick
+				now := world.grid[idx(wx, wy)]
+				if y == 0 && before != now {
+					to_wake_chunk(world.chunks, cx, cy - 1)
 				}
-			}
-		} else {
-			for x := Chunk_Size - 1; x >= 0; x -= 1 {
-				wx, wy := to_world_pos(cx, cy, x, y)
-				cell := world.grid[idx(wx, wy)]
-				if update_cell(world, wx, wy) {
-					chunk.last_updated_tick = tick
-					if y == 0 && cell != world.grid[idx(wx, wy)] {
-						to_wake_chunk(world.chunks, cx, cy - 1)
-					}
+				if x == 0 && before != now {
+					to_wake_chunk(world.chunks, cx - 1, cy)
+				}
+				if x == Chunk_Size - 1 && before != now {
+					to_wake_chunk(world.chunks, cx + 1, cy)
 				}
 			}
 		}
@@ -173,17 +152,32 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 	vx := world.vel_x
 	vy := world.vel_y
 	grid := world.grid
-	if is_empty(grid, now) || is_dead(grid, now) do return false
-	vy[now] += Gravity * f32(Dt)
-	if vy[now] >= Max_Step_Y do vy[now] = Max_Step_Y
-	if vx[now] >= Max_Step_X do vy[now] = Max_Step_X
-	if move_down(world, x, y) do return true
-	if move_diagonal(world, x, y) do return true
+	config := world.config
+
+	if is_empty(grid, now) || is_hard(grid, now) do return false
+	if is_dead(grid, x, y) do return false // eliminate possible dead cell
+
+	#partial switch grid[now] {
+	case .Sand:
+		vy[now] += config.sand.down_acc * f32(Dt)
+		if vy[now] >= config.sand.max_vy do vy[now] = config.sand.max_vy
+		if vx[now] >= config.sand.max_vx do vx[now] = config.sand.max_vx
+		if move_down(world, config.sand, x, y) do return true
+		if move_diagonal(world, config.sand, x, y) do return true
+	case .Water:
+		return false
+	}
 	return false
 }
 
+is_dead :: proc(grid: []Material, x, y: int) -> bool {
+	left := is_outside(x - 1, y) || is_solid(grid, idx(x - 1, y))
+	right := is_outside(x + 1, y) || is_solid(grid, idx(x + 1, y))
+	bottom := is_outside(x, y + 1) || is_solid(grid, idx(x, y + 1))
+	return left && right && bottom
+}
 
-is_dead :: proc(grid: []Material, idx: int) -> bool {
+is_hard :: proc(grid: []Material, idx: int) -> bool {
 	return grid[idx] == .Cement
 }
 is_solid :: proc(grid: []Material, idx: int) -> bool {

@@ -3,18 +3,8 @@ package main
 import sim "simulation"
 import rl "vendor:raylib"
 
+
 main :: proc() {
-	// events queue init
-	events := sim.make_event_queues()
-	defer sim.delete_event_queues(&events)
-
-	// world init
-	world := sim.create_world()
-	defer sim.delete_world(&world)
-
-	pixel_buf := make([]rl.Color, sim.Width * sim.Height)
-	defer delete(pixel_buf)
-	TS := sim.T_Scales
 	// raylib window init
 	rl.InitWindow(sim.Width * sim.Scale, sim.Height * sim.Scale, "sandfall")
 	rl.SetTargetFPS(120)
@@ -25,6 +15,15 @@ main :: proc() {
 	rl.UnloadImage(image)
 	defer rl.UnloadTexture(texture)
 
+	// create game session
+	game := create_game()
+	defer delete_game(&game)
+	world := &game.world
+	events := &game.events
+	pixel_buf := game.pixel_buf
+	config := &game.config
+	TS := sim.T_Scales
+	
 	// main loop
 	prev := rl.GetTime()
 	acc: f64 = 0
@@ -32,24 +31,27 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		now := rl.GetTime()
 		dt := now - prev
-		acc += dt * TS[sim.t_scale]
+		acc += dt * TS[config.time_scale]
 		prev = now
-		sim.track_input(&events)
+		mouse_pos := rl.GetMousePosition()
+		game.mouse.world = mouse_world(mouse_pos)
+		game.mouse.pos = mouse_pos
+		track_input(&game)
 		for acc >= sim.Dt {
 			tick += 1
-			sim.event_listener(&world, &events)
-			sim.update(&world, tick)
+			event_listener(world, events)
+			sim.update(world, tick)
 			acc -= sim.Dt
 		}
-		build_pixel_buf(&world, pixel_buf)
+		build_pixel_buf(&game)
 		rl.UpdateTexture(texture, raw_data(pixel_buf))
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
-		if sim.debug_mode == .Chunk {
-			render_debug_chunk(&world)
+		if config.debug_mode == .Chunk {
+			render_debug_chunk(world)
 		}
-		render_brush(int(rl.GetMouseX() / sim.Scale), int(rl.GetMouseY() / sim.Scale))
+		render_brush(config, game.mouse)
 		rl.DrawFPS(10, 10)
 		rl.EndDrawing()
 	}

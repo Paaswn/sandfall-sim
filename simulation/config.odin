@@ -28,6 +28,16 @@ Modifier_Key :: enum {
 	Shift,
 	Alt,
 }
+Material_Config :: struct {
+    down_acc : f32,
+    slide_thresh : f32,
+    side_thresh : f32,
+    max_vy: f32,
+    max_vx: f32,
+    friction: f32,
+    damp: f32,
+    impact_to_side: f32,
+}
 Modifiers :: bit_set[Modifier_Key]
 Input :: struct {
 	mouse_wheel: int,
@@ -50,12 +60,7 @@ Key_Binds :: [Action]Input {
 	.Make_Spawn_Point    = {0, .F, {.None}},
 }
 // runtime config
-debug_mode := Debug.Off
-current_mat := Material.Sand
-select_explosive := false
-spawn_radius := 4
 T_Scales :[]f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
-t_scale: int = len(T_Scales) - 1 
 // constant
 Chunk_Size :: 16
 Width_Chunk :: (480 + 15) / Chunk_Size
@@ -67,25 +72,7 @@ Width :: 480
 Height :: 270
 Gravity: f32 : 30
 Scale :: 4
+Brush_Size :: 4
+T_Scale :: 5
+Start_Mat :: Material.Sand
 // global material constant
-Max_Step_Y :: 8
-// sand constant
-X_Threshold :: 0.25
-Max_Vx :: 2.5
-Max_Vy :: 8.0
-
-Resting_Damping :: 0.5
-Y_Damp_On_Hit :: 0.4
-
-Diagonal_X_Transfer :: 0.6
-Diagonal_Y_Transfer :: 0.5
-Horizontal_X_Transfer :: 0.3
-Horizontal_Y_Transfer :: 0.2
-
-Impact_To_Side :: 0.75
-Neighbor_Transfer :: 0.3
-
-Sleep_Epsilon :: 0.1
-// water constant
-Max_Step_X :: 4
-Impact_To_Side_Liquid :: 0.3
