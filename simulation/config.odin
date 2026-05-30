@@ -59,7 +59,7 @@ t_scale: f64 = 1
 Chunk_Size :: 16
 Width_Chunk :: (480 + 15) / Chunk_Size
 Height_Chunk :: (270 + 15) / Chunk_Size
-Chunk_Idle_Thresh :: 4
+Chunk_Idle_Thresh :: 6
 Dt: f64 : 1.0 / 60.0
 Width :: 480
 Height :: 270

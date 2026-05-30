@@ -1,4 +1,5 @@
 package simulation
+import "core:fmt"
 Chunk :: struct {
 	last_updated_tick: u64,
 	active_next:       bool,
@@ -36,5 +37,20 @@ to_world_pos :: proc(cx, cy, x, y: int) -> (int, int) {
 	return nx, ny
 }
 
-wake_neighbor_chunk :: proc(world: ^World, origin_x, origin_y, off: int) {
+is_chunk_outside :: proc(x, y: int) -> bool {
+    return x < 0 || x > Width_Chunk - 1 || y < 0 || y > Height_Chunk - 1
+}
+
+wake_neighbor_chunk :: proc(chunks: []Chunk, origin_x, origin_y, off: int) {
+    cx, cy := to_chunk_pos(origin_x, origin_y)
+    for y in cy - off ..= cy + off {
+		for x in cx - off ..= cx + off {
+			if is_chunk_outside(x, y) do continue
+			wake_chunk(chunks, chunk_idx_by_cpos(x, y))
+		}
+	}
+}
+
+wake_chunk :: proc(chunks: []Chunk, chunk_idx: int) {
+    get_chunk(chunks, chunk_idx).active_next = true
 }

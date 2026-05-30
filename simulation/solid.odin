@@ -1,6 +1,7 @@
 package simulation
 
 import "core:math"
+import "core:fmt"
 drag_neighbor :: proc(world: ^World, source: f32, x, y: int) {
 
 }
@@ -20,12 +21,13 @@ move_down :: proc(world: ^World, x, y: int) -> bool {
     to_y := y
     for s in 1..=step {
         next_y := y + s
-        if is_outside(x, y+1) || is_solid(grid, idx( x, y+1 )) do break
+        if is_outside(x, y+s) || is_solid(grid, idx( x, y+s )) do break
         to_y = next_y 
     }
     if to_y != y {
         to := idx(x, to_y)
-        get_chunk(world.chunks, chunk_idx_by_wpos(x, to_y)).active_next = true
+        wake_neighbor_chunk(world.chunks, x, to_y, 1)
+        vy[to] = vy[now]
         move_cell(world, to, now)
         return true
     }

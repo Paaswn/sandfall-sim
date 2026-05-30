@@ -102,8 +102,7 @@ total_spawn: u64 = 0
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
-	cx, cy := to_chunk_pos(x, y)
-	get_chunk(world.chunks, chunk_idx_by_cpos(cx, cy)).active_next = true
+	wake_chunk(world.chunks, chunk_idx_by_wpos(x, y))
 	total_spawn += 1
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
@@ -137,7 +136,7 @@ update :: proc(world: ^World, tick: u64) {
 
 update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 	for y := Chunk_Size - 1; y >= 0; y -= 1 {
-	if cy == Height_Chunk - 1 && y > Chunk_Size - 3 do continue
+	if cy == Height_Chunk - 1 && y > Chunk_Size - 4 do continue
 	if tick % 2 == 0 {
 			for x := 0; x < Chunk_Size; x += 1 {
 				wx, wy := to_world_pos(cx, cy, x, y)
