@@ -103,7 +103,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
 	cx, cy := to_chunk_pos(x, y)
-	wake_chunk(world.chunks, cx, cy)
+	to_wake_chunk(world.chunks, cx, cy)
 	total_spawn += 1
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
@@ -124,13 +124,17 @@ move_cell :: proc(world: ^World, to, now: int) {
 update :: proc(world: ^World, tick: u64) {
 	for cy := Height_Chunk - 1; cy >= 0; cy -= 1 {
 		for cx := 0; cx < Width_Chunk; cx += 1 {
-			chunk := get_chunk(world.chunks, chunk_idx_by_cpos(cx, cy))
+			chunk_idx := chunk_idx_by_cpos(cx, cy)
+			chunk := get_chunk(world.chunks, chunk_idx)
 			chunk.active = chunk.active_next
 			if chunk.active {
 				update_chunk(world, chunk, cx, cy, tick)
 				chunk.active_next = true
+				delta_tick := tick - chunk.last_updated_tick
+				if delta_tick >= Chunk_Idle_Thresh {
+					chunk.active_next = false
+				}
 			}
-			if tick - chunk.last_updated_tick >= Chunk_Idle_Thresh do chunk.active_next = false
 		}
 	}
 }
@@ -145,18 +149,18 @@ update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 				if update_cell(world, wx, wy) {
 					chunk.last_updated_tick = tick
 					if y == 0 && cell != world.grid[idx(wx, wy)] {
-						wake_chunk(world.chunks, cx, cy - 1)
+						to_wake_chunk(world.chunks, cx, cy - 1)
 					}
 				}
 			}
 		} else {
-			for x := Width - 1; x >= 0; x -= 1 {
+			for x := Chunk_Size - 1; x >= 0; x -= 1 {
 				wx, wy := to_world_pos(cx, cy, x, y)
 				cell := world.grid[idx(wx, wy)]
 				if update_cell(world, wx, wy) {
 					chunk.last_updated_tick = tick
 					if y == 0 && cell != world.grid[idx(wx, wy)] {
-						wake_chunk(world.chunks, cx, cy - 1)
+						to_wake_chunk(world.chunks, cx, cy - 1)
 					}
 				}
 			}
@@ -171,7 +175,10 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 	grid := world.grid
 	if is_empty(grid, now) || is_dead(grid, now) do return false
 	vy[now] += Gravity * f32(Dt)
+	if vy[now] >= Max_Step_Y do vy[now] = Max_Step_Y
+	if vx[now] >= Max_Step_X do vy[now] = Max_Step_X
 	if move_down(world, x, y) do return true
+	if move_diagonal(world, x, y) do return true
 	return false
 }
 
