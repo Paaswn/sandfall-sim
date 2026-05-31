@@ -57,7 +57,7 @@ Key_Binds :: [Action]Input {
 // runtime config
 T_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
 // constant
-Fallback_Conf :: World_Config{Material_Config{30.0, 1.0, 1.0, 8, 4, 0.8, 0.5, 0.3, 4.5}}
+Fallback_Conf :: World_Config{Material_Config{30.0, 1.0, 1.0, 8, 4, 0.8, 0.5, 0.3, 4.5, 0.1}}
 Config_Path :: "./config/world_config.json"
 Chunk_Size :: 16
 Width_Chunk :: (480 + 15) / Chunk_Size

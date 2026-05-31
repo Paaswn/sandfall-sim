@@ -26,15 +26,16 @@ Material :: enum u8 {
 }
 
 Material_Config :: struct {
-    down_acc : f32,
-    slide_thresh : f32,
-    side_thresh : f32,
-    max_vy: f32,
-    max_vx: f32,
-    friction: f32,
-    damp: f32,
-    impact_to_side: f32,
-    transfer_thresh: f32
+	down_acc:       f32,
+	slide_thresh:   f32,
+	side_thresh:    f32,
+	max_vy:         f32,
+	max_vx:         f32,
+	friction:       f32,
+	damp:           f32,
+	impact_to_side: f32,
+	impact_thresh:  f32,
+	neighbor_drag:  f32,
 }
 
 init_config :: proc() -> World_Config {
@@ -42,9 +43,9 @@ init_config :: proc() -> World_Config {
 }
 
 create_world :: proc() -> World {
-    Chunk_Count_X :: (Width  + Chunk_Size - 1) / Chunk_Size
-    Chunk_Count_Y :: (Height + Chunk_Size - 1) / Chunk_Size
-    return World {
+	Chunk_Count_X :: (Width + Chunk_Size - 1) / Chunk_Size
+	Chunk_Count_Y :: (Height + Chunk_Size - 1) / Chunk_Size
+	return World {
 		make([]f32, Width * Height),
 		make([]f32, Width * Height),
 		make([]Material, Width * Height),
@@ -130,7 +131,7 @@ update :: proc(world: ^World, tick: u64) {
 
 update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 	for y := Chunk_Size - 1; y >= 0; y -= 1 {
-		if cy == Height_Chunk - 1 && y > Chunk_Size - 4 do continue
+		if cy == Height_Chunk - 1 && y > Chunk_Size - 3 do continue
 		start_x, end_x, step_x := 0, Chunk_Size, 1
 
 		if tick % 2 != 0 {
@@ -168,16 +169,20 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 	grid := world.grid
 	config := world.config
 
-	if is_empty(grid, now) || is_hard(grid, now) do return false
-	if is_dead(grid, x, y) do return false // eliminate possible dead cell
+	if is_empty(grid, now) || is_hard(grid, now) {
+		vx[now] = 0
+		vy[now] = 0
+		return false
+	}
+	if is_dead(grid, x, y) do return false // skip possible dead cell
 
 	#partial switch grid[now] {
 	case .Sand:
-		vy[now] += config.sand.down_acc * f32(Dt)
-		if vy[now] >= config.sand.max_vy do vy[now] = config.sand.max_vy
-		if vx[now] >= config.sand.max_vx do vx[now] = config.sand.max_vx
+		vy[now] = rl.Clamp(vy[now] + config.sand.down_acc * f32(Dt), 0, config.sand.max_vy)
+		vx[now] = rl.Clamp(vx[now], 0, config.sand.max_vx)
 		if move_down(world, config.sand, x, y) do return true
 		if move_diagonal(world, config.sand, x, y) do return true
+		if move_side(world, config.sand, x, y) do return true
 	case .Water:
 		return false
 	}
