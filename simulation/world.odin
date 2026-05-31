@@ -21,21 +21,27 @@ World_Config :: struct {
 Material :: enum u8 {
 	Empty,
 	Sand,
+	Dirt,
 	Cement,
 	Water,
 }
 
+Material_Type_Config :: struct {
+	Max_Vy: f32,
+	Max_Vx: f32,
+}
+
+Powder :: Material_Type_Config{8.0, 4.0}
 Material_Config :: struct {
 	down_acc:       f32,
 	slide_thresh:   f32,
 	side_thresh:    f32,
-	max_vy:         f32,
-	max_vx:         f32,
 	friction:       f32,
 	damp:           f32,
 	impact_to_side: f32,
 	impact_thresh:  f32,
-	neighbor_drag:  f32,
+	slide_drag:     f32,
+	fall_drag:      f32,
 }
 
 init_config :: proc() -> World_Config {
@@ -95,6 +101,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	to_wake_chunk(world.chunks, cx, cy - 1)
 	to_wake_chunk(world.chunks, cx, cy)
 	total_spawn += 1
+	world.vel_y[i] = 0.5
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
 }
@@ -174,12 +181,15 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 		vy[now] = 0
 		return false
 	}
-	if is_dead(grid, x, y) do return false // skip possible dead cell
+	if is_dead(grid, x, y) {
+		vy[now] *= config.sand.damp
+		return false // skip possible dead cell
+	}
 
 	#partial switch grid[now] {
 	case .Sand:
-		vy[now] = rl.Clamp(vy[now] + config.sand.down_acc * f32(Dt), 0, config.sand.max_vy)
-		vx[now] = rl.Clamp(vx[now], 0, config.sand.max_vx)
+		vy[now] = rl.Clamp(vy[now] + config.sand.down_acc * f32(Dt), 0, Powder.Max_Vy)
+		vx[now] = rl.Clamp(vx[now], 0, Powder.Max_Vx)
 		if move_down(world, config.sand, x, y) do return true
 		if move_diagonal(world, config.sand, x, y) do return true
 		if move_side(world, config.sand, x, y) do return true
@@ -222,6 +232,8 @@ get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> rl.Color {
 		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
 	case .Sand:
 		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
+	case .Dirt:
+		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
 	case .Water:
 		color = random_shade(get_material_base_color(mat), x, y, 10, 0)
 	case .Empty:
@@ -237,6 +249,8 @@ get_material_base_color :: proc(mat: Material) -> rl.Color {
 		to_return = rl.BLACK
 	case .Sand:
 		to_return = rl.BEIGE
+	case .Dirt:
+		to_return = rl.BROWN
 	case .Cement:
 		to_return = rl.DARKGRAY
 	case .Water:

@@ -12,12 +12,12 @@ build_pixel_buf :: proc(game: ^Game) {
 	case .Velocity_Y:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(world.vel_y[idx], world.config.sand.max_vy)
+			else do buf[idx] = get_vel_color(world.vel_y[idx], sim.Powder.Max_Vy)
 		})
 	case .Velocity_X:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(world.vel_x[idx], world.config.sand.max_vx)
+			else do buf[idx] = get_vel_color(world.vel_x[idx], sim.Powder.Max_Vx)
 		})
 
 	case:

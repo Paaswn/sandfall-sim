@@ -1,4 +1,5 @@
 package simulation
+
 import "core:fmt"
 import "core:math"
 Chunk :: struct {

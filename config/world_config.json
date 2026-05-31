@@ -1,14 +1,13 @@
 {
   "sand": {
     "down_acc": 30,
-    "slide_thresh": 1.2,
-    "side_thresh": 1.5,
-    "max_vy": 8,
-    "max_vx": 4,
+    "slide_thresh": 0.5 ,
+    "side_thresh": 1.0,
     "friction": 0.92,
-    "damp": 0.5,
-    "impact_to_side": 0.4,
-    "impact_thresh": 3.5,
-    "neighbor_drag": 0.2
+    "damp": 0.8,
+    "impact_to_side": 0.6,
+    "impact_thresh": 2.5,
+    "slide_drag": 0.48,
+    "fall_drag": 0.32
   }
 }
