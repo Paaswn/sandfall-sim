@@ -54,3 +54,9 @@ main :: proc() {
 		rl.EndDrawing()
 	}
 }
+
+on_window_resize :: proc() {
+    if rl.IsWindowResized() {
+        rl.SetWindowSize(rl.GetRenderWidth(), rl.GetRenderHeight())
+    }
+}
