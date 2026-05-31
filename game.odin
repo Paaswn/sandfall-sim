@@ -1,5 +1,8 @@
 package main
 
+import "core:fmt"
+import "core:os"
+import "core:time"
 import sim "simulation"
 import rl "vendor:raylib"
 
@@ -15,8 +18,8 @@ Mouse_State :: struct {
 	pos:         rl.Vector2,
 	world:       [2]int,
 	prev_world:  [2]int,
-	mouse_wheel: Wheel_State,
-	has_prev: bool
+	wheel: Wheel_State,
+	has_prev:    bool,
 }
 
 Wheel_State :: enum {
@@ -25,7 +28,18 @@ Wheel_State :: enum {
 	Down,
 }
 
+update_mouse_state :: proc(mouse: ^Mouse_State) {
+	mouse_pos := rl.GetMousePosition()
+	mouse.world = mouse_world(mouse_pos)
+	mouse.pos = mouse_pos
+	if rl.GetMouseWheelMove() < 0 do mouse.wheel = .Down
+	else if rl.GetMouseWheelMove() > 0 do mouse.wheel = .Up
+	else do mouse.wheel = .None
 
+}
+hot_reload :: proc(world: ^sim.World) {
+	world.config = sim.load_world_config(sim.Config_Path)
+}
 create_game :: proc() -> Game {
 	mouse_pos := rl.GetMousePosition()
 	return Game {

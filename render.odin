@@ -114,16 +114,15 @@ render_debug_chunk :: proc(world: ^sim.World) {
 
 render_brush :: proc(config: ^Game_Config, mouse: Mouse_State) {
 
-    if config.brush_size == 0 {
-		rl.DrawRectangle(
-			i32(mouse.world.x * sim.Scale),
-			i32(mouse.world.y * sim.Scale),
-			i32(sim.Scale),
-			i32(sim.Scale),
-			rl.WHITE,
-		)
-		return
-	}
+	rl.DrawRectangle(
+		i32(mouse.world.x * sim.Scale),
+		i32(mouse.world.y * sim.Scale),
+		i32(sim.Scale),
+		i32(sim.Scale),
+		rl.WHITE,
+	)
+	if config.brush_size == 0 do return
+
 	for y in mouse.world.y - config.brush_size ..= mouse.world.y + config.brush_size {
 		for x in mouse.world.x - config.brush_size ..= mouse.world.x + config.brush_size {
 			if sim.is_outside(x, y) {

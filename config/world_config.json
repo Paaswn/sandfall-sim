@@ -1,0 +1,13 @@
+{
+  "sand": {
+    "down_acc": 30,
+    "slide_thresh": 1.0,
+    "side_thresh": 1.0,
+    "max_vy": 8,
+    "max_vx": 4,
+    "friction": 0.8,
+    "damp": 0.5,
+    "impact_to_side": 0.3,
+    "transfer_thresh": 4.5
+  }
+}

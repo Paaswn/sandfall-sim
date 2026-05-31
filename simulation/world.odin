@@ -25,17 +25,31 @@ Material :: enum u8 {
 	Water,
 }
 
+Material_Config :: struct {
+    down_acc : f32,
+    slide_thresh : f32,
+    side_thresh : f32,
+    max_vy: f32,
+    max_vx: f32,
+    friction: f32,
+    damp: f32,
+    impact_to_side: f32,
+    transfer_thresh: f32
+}
+
 init_config :: proc() -> World_Config {
-	return World_Config{Material_Config{30.0, 1.0, 1.0, 8, 4, 0.5, 0.5, 0.3}}
+	return load_world_config(Config_Path)
 }
 
 create_world :: proc() -> World {
-	return World {
+    Chunk_Count_X :: (Width  + Chunk_Size - 1) / Chunk_Size
+    Chunk_Count_Y :: (Height + Chunk_Size - 1) / Chunk_Size
+    return World {
 		make([]f32, Width * Height),
 		make([]f32, Width * Height),
 		make([]Material, Width * Height),
 		make([]rl.Color, Width * Height),
-		make([]Chunk, Width * Height / Chunk_Size),
+		make([]Chunk, Chunk_Count_X * Chunk_Count_Y),
 		init_config(),
 	}
 }

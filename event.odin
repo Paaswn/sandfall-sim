@@ -5,9 +5,10 @@ import sim "simulation"
 import rl "vendor:raylib"
 
 Event_Queues :: struct {
-	spawn:      [dynamic]Spawn_Event,
-	spawn_perm: map[int]Spawn_Point,
-	spawn_point: int
+	spawn:       [dynamic]Spawn_Event,
+	spawn_perm:  map[int]Spawn_Point,
+	hot_reload:  bool,
+	spawn_point: int,
 }
 Material :: sim.Material
 World :: sim.World
@@ -30,7 +31,7 @@ Spawn_Point :: struct {
 }
 
 make_event_queues :: proc() -> Event_Queues {
-	return Event_Queues{make([dynamic]Spawn_Event), make(map[int]Spawn_Point), 0}
+	return Event_Queues{make([dynamic]Spawn_Event), make(map[int]Spawn_Point), false, 0}
 }
 
 delete_event_queues :: proc(queues: ^Event_Queues) {
@@ -48,6 +49,11 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	}
 	for _, se in events.spawn_perm {
 		sim.circle_brush_spawn(world, se.x0, se.y0, se.r, se.material)
+	}
+	if events.hot_reload {
+		hot_reload(world)
+		fmt.eprintln("hot reloaded!")
+		events.hot_reload = false
 	}
 	clear_queues(events)
 }
@@ -80,8 +86,8 @@ track_input :: proc(game: ^Game) {
 				}
 			}
 		}
-		if input.mouse_wheel > 0 && rl.GetMouseWheelMove() < 0 do continue
-		if input.mouse_wheel < 0 && rl.GetMouseWheelMove() > 0 do continue
+		if input.mouse_wheel > 0 && mouse.wheel != .Up do continue
+		if input.mouse_wheel < 0 && mouse.wheel != .Down do continue
 		if !rl.IsKeyPressed(input.trigger) && input.trigger != .KEY_NULL {
 			continue
 		}
@@ -114,38 +120,43 @@ track_input :: proc(game: ^Game) {
 			config.brush_size -= 1
 			if config.brush_size <= 1 do config.brush_size = 1
 		case .Make_Spawn_Point:
-			for _, se in events.spawn_perm {
-				if intersect(
-					se.x0 - se.r,
-					se.y0 - se.r,
-					2 * se.r,
-					2 * se.r,
-					mouse.world.x - config.brush_size,
-					mouse.world.y - config.brush_size,
-					config.brush_size * 2,
-					config.brush_size * 2,
-				) {
-					events.spawn_point -= 1
-					delete_key(&events.spawn_perm, se.point)
-					return
-				}
-			}
-			events.spawn_point += 1
-			map_insert(
-				&events.spawn_perm,
-				events.spawn_point,
-				Spawn_Point {
-					events.spawn_point,
-					mouse.world.x,
-					mouse.world.y,
-					config.brush_size,
-					config.current_mat,
-				},
-			)
+			create_spawn_point(mouse, events, config)
+		case .Hot_Reload:
+		    if !events.hot_reload do events.hot_reload = true
 		}
 	}
 }
 
+create_spawn_point :: proc(mouse: ^Mouse_State, events: ^Event_Queues, config: ^Game_Config) {
+	for _, se in events.spawn_perm {
+		if intersect(
+			se.x0 - se.r,
+			se.y0 - se.r,
+			2 * se.r,
+			2 * se.r,
+			mouse.world.x - config.brush_size,
+			mouse.world.y - config.brush_size,
+			config.brush_size * 2,
+			config.brush_size * 2,
+		) {
+			events.spawn_point -= 1
+			delete_key(&events.spawn_perm, se.point)
+			return
+		}
+	}
+	events.spawn_point += 1
+	map_insert(
+		&events.spawn_perm,
+		events.spawn_point,
+		Spawn_Point {
+			events.spawn_point,
+			mouse.world.x,
+			mouse.world.y,
+			config.brush_size,
+			config.current_mat,
+		},
+	)
+}
 intersect :: proc(x0, y0, w0, h0, x1, y1, w1, h1: int) -> bool {
 	if x0 + w0 < x1 || x0 > x1 + w1 do return false
 	if y0 + h0 < y1 || y0 > y1 + h1 do return false
@@ -164,14 +175,7 @@ material_spawn_handler :: proc(
 			if mouse.has_prev {
 				append(
 					spawn,
-					Spawn_Event {
-						omsx,
-						omsy,
-						msx,
-						msy,
-						config.brush_size,
-						config.current_mat,
-					},
+					Spawn_Event{omsx, omsy, msx, msy, config.brush_size, config.current_mat},
 				)
 			} else {
 				append(

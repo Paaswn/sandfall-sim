@@ -19,8 +19,8 @@ move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool
 		if is_solid(grid, next) || is_solid(grid, idx(x + side, y)) do continue
 		cx, cy := to_chunk_pos(x + side, y + 1)
 		to_wake_chunk(world.chunks, cx, cy)
-		vx[next] = vx[now]
-		vy[next] = vy[now]
+		vx[next] = vx[now] * config.friction
+		vy[next] = vy[now] * config.friction
 		move_cell(world, next, now)
 		return true
 	}
@@ -41,7 +41,9 @@ move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	for s in 1 ..= step {
 		next_y := y + s
 		if is_outside(x, y + s) || is_solid(grid, idx(x, y + s)) {
-			vx[now] += vy[now] * config.impact_to_side
+			if vy[now] >= config.transfer_thresh {
+				vx[now] += vy[now] * config.impact_to_side
+			}
 			vy[now] *= config.damp
 			break
 		}

@@ -33,9 +33,7 @@ main :: proc() {
 		dt := now - prev
 		acc += dt * TS[config.time_scale]
 		prev = now
-		mouse_pos := rl.GetMousePosition()
-		game.mouse.world = mouse_world(mouse_pos)
-		game.mouse.pos = mouse_pos
+		update_mouse_state(&game.mouse)
 		track_input(&game)
 		for acc >= sim.Dt {
 			tick += 1
