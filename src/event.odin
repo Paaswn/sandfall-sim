@@ -86,8 +86,7 @@ track_input :: proc(game: ^Game) {
 				}
 			}
 		}
-		if input.mouse_wheel > 0 && mouse.wheel != .Up do continue
-		if input.mouse_wheel < 0 && mouse.wheel != .Down do continue
+		if input.mouse_wheel != mouse.wheel do continue
 		if !rl.IsKeyPressed(input.trigger) && input.trigger != .KEY_NULL {
 			continue
 		}
@@ -106,6 +105,8 @@ track_input :: proc(game: ^Game) {
 			config.current_mat = .Empty
 		case .Select_Cement:
 			config.current_mat = .Cement
+		case .Select_Dirt:
+			config.current_mat = .Dirt
 		case .Select_Water:
 			config.current_mat = .Water
 		case .Increase_Tick:
@@ -122,7 +123,7 @@ track_input :: proc(game: ^Game) {
 		case .Make_Spawn_Point:
 			create_spawn_point(mouse, events, config)
 		case .Hot_Reload:
-		    if !events.hot_reload do events.hot_reload = true
+			if !events.hot_reload do events.hot_reload = true
 		}
 	}
 }

@@ -18,14 +18,8 @@ Mouse_State :: struct {
 	pos:         rl.Vector2,
 	world:       [2]int,
 	prev_world:  [2]int,
-	wheel: Wheel_State,
+	wheel: sim.Wheel_State,
 	has_prev:    bool,
-}
-
-Wheel_State :: enum {
-	Up,
-	None,
-	Down,
 }
 
 update_mouse_state :: proc(mouse: ^Mouse_State) {
@@ -35,7 +29,6 @@ update_mouse_state :: proc(mouse: ^Mouse_State) {
 	if rl.GetMouseWheelMove() < 0 do mouse.wheel = .Down
 	else if rl.GetMouseWheelMove() > 0 do mouse.wheel = .Up
 	else do mouse.wheel = .None
-
 }
 hot_reload :: proc(world: ^sim.World) {
 	world.config = sim.load_world_config(sim.Config_Path)
