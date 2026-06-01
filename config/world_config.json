@@ -1,5 +1,5 @@
-{
-  "sand": {
+[
+  {
     "down_acc": 30,
     "slide_thresh": 1.5,
     "side_thresh": 2.2,
@@ -9,5 +9,16 @@
     "impact_thresh": 2.5,
     "slide_drag": 0.28,
     "fall_drag": 0.12
+  },
+  {
+    "down_acc": 40,
+    "slide_thresh": 2.5,
+    "side_thresh": 3.2,
+    "friction": 0.8,
+    "damp": 0.3,
+    "impact_to_side": 0.9,
+    "impact_thresh": 2.5,
+    "slide_drag": 0.2,
+    "fall_drag": 0.1
   }
-}
+]

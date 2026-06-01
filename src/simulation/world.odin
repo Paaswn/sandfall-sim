@@ -6,10 +6,6 @@ import "core:math/rand"
 import rl "vendor:raylib"
 
 
-World_Config :: struct {
-	sand: Material_Config,
-}
-
 Material :: enum u8 {
 	Empty,
 	Sand,
@@ -24,7 +20,7 @@ Material_Type_Config :: struct {
 }
 
 Powder :: Material_Type_Config{8.0, 4.0}
-Material_Config :: struct {
+Powder_Config :: struct {
 	down_acc:       f32,
 	slide_thresh:   f32,
 	side_thresh:    f32,
@@ -35,7 +31,11 @@ Material_Config :: struct {
 	slide_drag:     f32,
 	fall_drag:      f32,
 }
-
+Liquid_Config :: struct {}
+Material_Config :: union {
+	Liquid_Config,
+	Powder_Config,
+}
 World :: struct {
 	tick:    u64,
 	vel_x:   []f32,
@@ -47,10 +47,7 @@ World :: struct {
 	side:    []int,
 	config:  World_Config,
 }
-
-init_config :: proc() -> World_Config {
-	return load_world_config(Config_Path)
-}
+World_Config :: [Material]Material_Config
 
 create_world :: proc() -> World {
 	Chunk_Count_X :: (Width + Chunk_Size - 1) / Chunk_Size
@@ -64,7 +61,7 @@ create_world :: proc() -> World {
 		make([]Chunk, Chunk_Count_X * Chunk_Count_Y),
 		make([]u64, Width * Height),
 		make([]int, Width * Height),
-		init_config(),
+		load_world_config(Config_Path),
 	}
 }
 
@@ -188,28 +185,30 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 	vx := world.vel_x
 	vy := world.vel_y
 	grid := world.grid
-	config := world.config
-
+	config: Material_Config
 	if is_empty(grid, now) || is_hard(grid, now) {
 		vx[now] = 0
 		vy[now] = 0
 		return false
 	}
-	if is_dead(grid, x, y) {
-		vy[now] *= config.sand.damp
-		return false // skip possible dead cell
+	switch c in world.config[grid[now]] {
+	case Liquid_Config:
+		if is_dead(grid, x, y) {
+			// vy[now] *=
+			return false // skip possible dead cell
+		}
+	case Powder_Config:
+		if is_dead(grid, x, y) {
+			vy[now] *= c.damp
+			return false // skip possible dead cell
+		}
+		vy[now] = rl.Clamp(vy[now] + c.down_acc * f32(Dt), 0, Powder.Max_Vy)
+		vx[now] = rl.Clamp(vx[now], -Powder.Max_Vx, Powder.Max_Vx)
+		if move_down(world, c, x, y) do return true
+		if move_diagonal(world, c, x, y) do return true
+		if move_side(world, c, x, y) do return true
 	}
 
-	#partial switch grid[now] {
-	case .Sand:
-		vy[now] = rl.Clamp(vy[now] + config.sand.down_acc * f32(Dt), 0, Powder.Max_Vy)
-		vx[now] = rl.Clamp(vx[now], -Powder.Max_Vx, Powder.Max_Vx)
-		if move_down(world, config.sand, x, y) do return true
-		if move_diagonal(world, config.sand, x, y) do return true
-		if move_side(world, config.sand, x, y) do return true
-	case .Water:
-		return false
-	}
 	return false
 }
 

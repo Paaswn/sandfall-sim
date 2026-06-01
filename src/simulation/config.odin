@@ -18,18 +18,26 @@ Modifier_Key :: enum {
 }
 Modifiers :: bit_set[Modifier_Key]
 Input :: struct {
-	mouse_wheel: int,
+	mouse_wheel: Wheel_State,
 	trigger:     rl.KeyboardKey,
 	modifer:     Modifiers,
 }
+
+Wheel_State :: enum {
+	Up,
+	None,
+	Down,
+}
+
 Action :: enum {
 	Debug_Off,
 	Debug_Velocity_Y,
 	Debug_Velocity_X,
 	Debug_Chunk,
-	Select_Sand,
 	Select_Empty,
+	Select_Sand,
 	Select_Cement,
+	Select_Dirt,
 	Select_Water,
 	Increase_Tick,
 	Decrease_Tick,
@@ -39,25 +47,25 @@ Action :: enum {
 	Hot_Reload,
 }
 Key_Binds :: [Action]Input {
-	.Debug_Off           = {0, .ONE, {.Ctrl}},
-	.Debug_Velocity_Y    = {0, .TWO, {.Ctrl}},
-	.Debug_Velocity_X    = {0, .THREE, {.Ctrl}},
-	.Debug_Chunk         = {0, .FOUR, {.Ctrl}},
-	.Select_Sand         = {0, .TWO, {.None}},
-	.Select_Empty        = {0, .ONE, {.None}},
-	.Select_Cement       = {0, .THREE, {.None}},
-	.Increase_Tick       = {1, .KEY_NULL, {.Shift}},
-	.Decrease_Tick       = {-1, .KEY_NULL, {.Shift}},
-	.Increase_Brush_Size = {1, .KEY_NULL, {.Ctrl}},
-	.Decrease_Brush_Size = {-1, .KEY_NULL, {.Ctrl}},
-	.Select_Water        = {0, .FOUR, {.None}},
-	.Make_Spawn_Point    = {0, .F, {.None}},
-	.Hot_Reload          = {0, .R, {.Ctrl}},
+	.Debug_Off           = {.None, .ONE, {.Ctrl}},
+	.Debug_Velocity_Y    = {.None, .TWO, {.Ctrl}},
+	.Debug_Velocity_X    = {.None, .THREE, {.Ctrl}},
+	.Debug_Chunk         = {.None, .FOUR, {.Ctrl}},
+	.Select_Empty        = {.None, .ONE, {.None}},
+	.Select_Sand         = {.None, .TWO, {.None}},
+	.Select_Cement       = {.None, .THREE, {.None}},
+	.Select_Water        = {.None, .FOUR, {.None}},
+	.Select_Dirt         = {.None, .FIVE, {.None}},
+	.Increase_Tick       = {.Up, .KEY_NULL, {.Shift}},
+	.Decrease_Tick       = {.Down, .KEY_NULL, {.Shift}},
+	.Increase_Brush_Size = {.Up, .KEY_NULL, {.Ctrl}},
+	.Decrease_Brush_Size = {.Down, .KEY_NULL, {.Ctrl}},
+	.Make_Spawn_Point    = {.None, .F, {.None}},
+	.Hot_Reload          = {.None, .R, {.Ctrl}},
 }
 // runtime config
 T_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
 // constant
-Fallback_Conf :: World_Config{Material_Config{30.0, 1.0, 1.0, 0.8, 0.5, 0.3, 4.5, 0.1, 0.01}}
 Config_Path :: "./config/world_config.json"
 Chunk_Size :: 16
 Width_Chunk :: (480 + 15) / Chunk_Size
@@ -73,7 +81,13 @@ Brush_Size :: 4
 T_Scale :: 5
 Start_Mat :: Material.Sand
 // global material constant
-
+Fallback_Conf: [Material]Material_Config = {
+	.Empty  = Powder_Config{},
+	.Sand   = Powder_Config{},
+	.Dirt   = Powder_Config{},
+	.Water  = Powder_Config{},
+	.Cement = Powder_Config{},
+}
 load_world_config :: proc(path: string) -> World_Config {
 	data, err := os.read_entire_file(path, context.allocator)
 	if err != nil {
@@ -83,6 +97,7 @@ load_world_config :: proc(path: string) -> World_Config {
 	config: World_Config
 	unmarshal_err := json.unmarshal(data, &config)
 	if unmarshal_err != nil {
+
 		fmt.eprintfln("Failed to parse config file, loaded fallback config")
 		return Fallback_Conf
 	}

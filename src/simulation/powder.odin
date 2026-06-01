@@ -4,7 +4,7 @@ package simulation
 import "core:fmt"
 import "core:math"
 // randomly move down-left or down-right, will try to transfer some velocity to its below cell on a success tick
-move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+move_diagonal :: proc(world: ^World, config: Powder_Config, x, y: int) -> bool {
 	grid := world.grid
 	vx := world.vel_x
 	vy := world.vel_y
@@ -38,7 +38,7 @@ move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool
 }
 
 // randomly move left or right, will try to transfer some velocity to the obstacle on a failed tick
-move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+move_side :: proc(world: ^World, config: Powder_Config, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
@@ -66,7 +66,7 @@ move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 }
 
 // move down based on vy value, will transfer some velocity to left-and-right cell
-move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+move_down :: proc(world: ^World, config: Powder_Config, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
