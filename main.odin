@@ -23,11 +23,10 @@ main :: proc() {
 	pixel_buf := game.pixel_buf
 	config := &game.config
 	TS := sim.T_Scales
-	
+
 	// main loop
 	prev := rl.GetTime()
 	acc: f64 = 0
-	tick: u64 = 0
 	for !rl.WindowShouldClose() {
 		now := rl.GetTime()
 		dt := now - prev
@@ -36,9 +35,9 @@ main :: proc() {
 		update_mouse_state(&game.mouse)
 		track_input(&game)
 		for acc >= sim.Dt {
-			tick += 1
 			event_listener(world, events)
-			sim.update(world, tick)
+			world.tick += 1
+			sim.update(world)
 			acc -= sim.Dt
 		}
 		build_pixel_buf(&game)
@@ -56,7 +55,7 @@ main :: proc() {
 }
 
 on_window_resize :: proc() {
-    if rl.IsWindowResized() {
-        rl.SetWindowSize(rl.GetRenderWidth(), rl.GetRenderHeight())
-    }
+	if rl.IsWindowResized() {
+		rl.SetWindowSize(rl.GetRenderWidth(), rl.GetRenderHeight())
+	}
 }

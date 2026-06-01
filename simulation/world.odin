@@ -5,14 +5,6 @@ import "core:math"
 import "core:math/rand"
 import rl "vendor:raylib"
 
-World :: struct {
-	vel_x:  []f32,
-	vel_y:  []f32,
-	grid:   []Material,
-	color:  []rl.Color,
-	chunks: []Chunk,
-	config: World_Config,
-}
 
 World_Config :: struct {
 	sand: Material_Config,
@@ -44,6 +36,18 @@ Material_Config :: struct {
 	fall_drag:      f32,
 }
 
+World :: struct {
+	tick:    u64,
+	vel_x:   []f32,
+	vel_y:   []f32,
+	grid:    []Material,
+	color:   []rl.Color,
+	chunks:  []Chunk,
+	updated: []u64,
+	side:    []int,
+	config:  World_Config,
+}
+
 init_config :: proc() -> World_Config {
 	return load_world_config(Config_Path)
 }
@@ -52,11 +56,14 @@ create_world :: proc() -> World {
 	Chunk_Count_X :: (Width + Chunk_Size - 1) / Chunk_Size
 	Chunk_Count_Y :: (Height + Chunk_Size - 1) / Chunk_Size
 	return World {
+		0,
 		make([]f32, Width * Height),
 		make([]f32, Width * Height),
 		make([]Material, Width * Height),
 		make([]rl.Color, Width * Height),
 		make([]Chunk, Chunk_Count_X * Chunk_Count_Y),
+		make([]u64, Width * Height),
+		make([]int, Width * Height),
 		init_config(),
 	}
 }
@@ -67,6 +74,8 @@ delete_world :: proc(world: ^World) {
 	delete(world.grid)
 	delete(world.color)
 	delete(world.chunks)
+	delete(world.updated)
+	delete(world.side)
 }
 
 idx :: proc(x, y: int) -> int {
@@ -97,6 +106,7 @@ total_spawn: u64 = 0
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
+	world.updated[i] = world.tick
 	cx, cy := to_chunk_pos(x, y)
 	to_wake_chunk(world.chunks, cx, cy - 1)
 	to_wake_chunk(world.chunks, cx, cy)
@@ -109,6 +119,9 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 //
 // **doesn't move velocity**
 move_cell :: proc(world: ^World, to, now: int) {
+	world.updated[to] = world.tick
+	world.side[to] = world.side[now]
+	world.side[now] = 0
 	world.grid[to] = world.grid[now]
 	world.color[to] = world.color[now]
 	world.grid[now] = .Empty
@@ -118,16 +131,16 @@ move_cell :: proc(world: ^World, to, now: int) {
 }
 
 
-update :: proc(world: ^World, tick: u64) {
+update :: proc(world: ^World) {
 	for cy := Height_Chunk - 1; cy >= 0; cy -= 1 {
 		for cx := 0; cx < Width_Chunk; cx += 1 {
 			chunk_idx := chunk_idx_by_cpos(cx, cy)
 			chunk := get_chunk(world.chunks, chunk_idx)
 			chunk.active = chunk.active_next
 			if chunk.active {
-				update_chunk(world, chunk, cx, cy, tick)
+				update_chunk(world, chunk, cx, cy, world.tick)
 				chunk.active_next = true
-				delta_tick := tick - chunk.last_updated_tick
+				delta_tick := world.tick - chunk.last_updated_tick
 				if delta_tick >= Chunk_Idle_Thresh {
 					chunk.active_next = false
 				}
@@ -171,6 +184,7 @@ update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 
 update_cell :: proc(world: ^World, x, y: int) -> bool {
 	now := idx(x, y) // always in border no need to check
+	if world.tick == world.updated[now] do return false
 	vx := world.vel_x
 	vy := world.vel_y
 	grid := world.grid
@@ -189,7 +203,7 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 	#partial switch grid[now] {
 	case .Sand:
 		vy[now] = rl.Clamp(vy[now] + config.sand.down_acc * f32(Dt), 0, Powder.Max_Vy)
-		vx[now] = rl.Clamp(vx[now], 0, Powder.Max_Vx)
+		vx[now] = rl.Clamp(vx[now], -Powder.Max_Vx, Powder.Max_Vx)
 		if move_down(world, config.sand, x, y) do return true
 		if move_diagonal(world, config.sand, x, y) do return true
 		if move_side(world, config.sand, x, y) do return true

@@ -12,12 +12,12 @@ build_pixel_buf :: proc(game: ^Game) {
 	case .Velocity_Y:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(world.vel_y[idx], sim.Powder.Max_Vy)
+			else do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
 		})
 	case .Velocity_X:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(world.vel_x[idx], sim.Powder.Max_Vx)
+			else do buf[idx] = get_vel_color(world.side[idx], world.vel_x[idx], sim.Powder.Max_Vx)
 		})
 
 	case:
@@ -146,9 +146,9 @@ render_brush :: proc(config: ^Game_Config, mouse: Mouse_State) {
 	}
 }
 
-get_vel_color :: proc(vel: f32, max: f32) -> rl.Color {
+get_vel_color :: proc(side: int, vel: f32, max: f32) -> rl.Color {
 	value := abs(vel / max)
-	if vel > 0 {
+	if side > 0 {
 		new_r := u8(math.clamp(int(value * 255), 0, 255))
 		return rl.Color{new_r, 0, 0, 255}
 	} else {
