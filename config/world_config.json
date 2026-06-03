@@ -1,5 +1,6 @@
-[
-  {
+{
+  "Sand": {
+    "type": "Powder",
     "down_acc": 30,
     "slide_thresh": 1.5,
     "side_thresh": 2.2,
@@ -10,7 +11,8 @@
     "slide_drag": 0.28,
     "fall_drag": 0.12
   },
-  {
+  "Dirt": {
+    "type": "Powder",
     "down_acc": 40,
     "slide_thresh": 2.5,
     "side_thresh": 3.2,
@@ -18,7 +20,19 @@
     "damp": 0.3,
     "impact_to_side": 0.9,
     "impact_thresh": 2.5,
-    "slide_drag": 0.2,
+    "slide_drag": 0.3,
+    "fall_drag": 0.2
+  },
+  "Water": {
+    "type": "Liquid",
+    "down_acc": 20,
+    "slide_thresh": 0,
+    "side_thresh": 0.3,
+    "friction": 0.98,
+    "damp": 0.3,
+    "impact_to_side": 0.9,
+    "impact_thresh": 2.5,
+    "slide_drag": 0.1,
     "fall_drag": 0.1
   }
-]
+}

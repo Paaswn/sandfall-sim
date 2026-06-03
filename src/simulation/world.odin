@@ -20,7 +20,9 @@ Material_Type_Config :: struct {
 }
 
 Powder :: Material_Type_Config{8.0, 4.0}
-Powder_Config :: struct {
+Liquid :: Material_Type_Config{10.0, 5.0}
+Material_Config :: struct {
+	type:           Material_Type,
 	down_acc:       f32,
 	slide_thresh:   f32,
 	side_thresh:    f32,
@@ -31,35 +33,34 @@ Powder_Config :: struct {
 	slide_drag:     f32,
 	fall_drag:      f32,
 }
-Liquid_Config :: struct {}
-Material_Config :: union {
-	Liquid_Config,
-	Powder_Config,
+Material_Type :: enum {
+	Liquid, // move without thresh (side/slide thresh =0)
+	Powder, // move with thresh
+	Hard, // static material that can't be damaged by any game object
+	Semi_Hard, // static material that can be slightly damaged by game object
 }
 World :: struct {
-	tick:    u64,
+	tick:    u32,
 	vel_x:   []f32,
 	vel_y:   []f32,
-	grid:    []Material,
+	grid:    []Material, // will be packed into mat id
 	color:   []rl.Color,
 	chunks:  []Chunk,
-	updated: []u64,
-	side:    []int,
+	updated: []u32,
+	side:    []int, // will be packed inside mat id
 	config:  World_Config,
 }
 World_Config :: [Material]Material_Config
 
 create_world :: proc() -> World {
-	Chunk_Count_X :: (Width + Chunk_Size - 1) / Chunk_Size
-	Chunk_Count_Y :: (Height + Chunk_Size - 1) / Chunk_Size
 	return World {
 		0,
 		make([]f32, Width * Height),
 		make([]f32, Width * Height),
 		make([]Material, Width * Height),
 		make([]rl.Color, Width * Height),
-		make([]Chunk, Chunk_Count_X * Chunk_Count_Y),
-		make([]u64, Width * Height),
+		make([]Chunk, Chunk_Per_Row * Chunk_Per_Column),
+		make([]u32, Width * Height),
 		make([]int, Width * Height),
 		load_world_config(Config_Path),
 	}
@@ -79,6 +80,11 @@ idx :: proc(x, y: int) -> int {
 	return y * Width + x
 }
 
+world_index :: proc(x, y: int) -> (index: int, inside: bool) {
+	inside = !is_outside(x, y)
+	index = idx(x, y)
+	return
+}
 is_outside :: proc(x, y: int) -> bool {
 	return x < 0 || y < 0 || x > Width - 1 || y > Height - 1
 }
@@ -105,37 +111,96 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	if world.grid[i] == material do return
 	world.updated[i] = world.tick
 	cx, cy := to_chunk_pos(x, y)
-	to_wake_chunk(world.chunks, cx, cy - 1)
-	to_wake_chunk(world.chunks, cx, cy)
-	total_spawn += 1
-	world.vel_y[i] = 0.5
+	// to_wake_chunk(world, cx, cy - 1)
+	to_wake_chunk(world, cx, cy)
+	if world.config[material].type == .Liquid {
+		world.side[i] = random_side()
+	}
+	world.vel_x[i] = 2
+	world.vel_y[i] = 2
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
+	total_spawn += 1
 }
 // only move material, color, active state, and reset old position values
 //
 // **doesn't move velocity**
-move_cell :: proc(world: ^World, to, now: int) {
+move_cell :: proc(world: ^World, to, from: int) {
+	world.grid[to] = world.grid[from]
+	world.grid[from] = .Empty
+	raw_move_cell(world, to, from)
+}
+
+swap_cell :: proc(world: ^World, to, from: int) {
+	from_cell := world.grid[from]
+	to_cell := world.grid[to]
+	world.grid[to] = from_cell
+	world.grid[from] = to_cell
+	raw_move_cell(world, to, from)
+
+}
+@(private)
+raw_move_cell :: proc(world: ^World, to, now: int) {
 	world.updated[to] = world.tick
 	world.side[to] = world.side[now]
 	world.side[now] = 0
-	world.grid[to] = world.grid[now]
 	world.color[to] = world.color[now]
-	world.grid[now] = .Empty
 	world.color[now] = get_material_base_color(.Empty)
 	world.vel_x[now] = 0
 	world.vel_y[now] = 0
 }
 
+update_new :: proc(world: ^World) {
+	y := Height - 1
+	skip := false
+	row: for y >= 0 {
+		if skip {
+			y -= Chunk_Size
+			skip = false
+		}
+		start_x, end_x, step_x := 0, Width, 1
+		if world.tick % 2 != 0 {
+			start_x = Width - 1
+			end_x = -1
+			step_x = -1
+		}
+		x := start_x
+		for x != end_x {
+			// cx, cy := to_chunk_pos(x, y)
+			// chunk := chunk_from_chunk_index(world.chunks, chunk_index_from_chunk_pos(x, y))
+			// if !chunk.active {
+			// 	if cx == 0 || cx == Chunk_Per_Row - 1 {skip = true; continue row}
+			// 	x += step_x * Chunk_Size
+			// 	continue
+			// }
+			update_cell(world, x, y)
+			// chunk.active_next = true
+			// delta_tick := world.tick - chunk.last_updated_tick
+			// if delta_tick >= Chunk_Idle_Thresh {
+			// 	chunk.active_next = false
+			// }
+			// chunk.active = chunk.active_next
+			x += step_x
+		}
+		y -= 1
+	}
+}
 
 update :: proc(world: ^World) {
-	for cy := Height_Chunk - 1; cy >= 0; cy -= 1 {
-		for cx := 0; cx < Width_Chunk; cx += 1 {
-			chunk_idx := chunk_idx_by_cpos(cx, cy)
+	for cy := Chunk_Per_Column - 1; cy >= 0; cy -= 1 {
+		start_cx, end_cx, step_cx := 0, Chunk_Per_Row, 1
+		if world.tick % 2 != 0 {
+			start_cx = Chunk_Per_Row - 1
+			end_cx = -1
+			step_cx = -1
+		}
+
+		for cx := start_cx; cx != end_cx; cx += step_cx {
+			chunk_idx := chunk_index_from_chunk_pos(cx, cy)
 			chunk := get_chunk(world.chunks, chunk_idx)
 			chunk.active = chunk.active_next
 			if chunk.active {
-				update_chunk(world, chunk, cx, cy, world.tick)
+				update_chunk(world, chunk, cx, cy)
 				chunk.active_next = true
 				delta_tick := world.tick - chunk.last_updated_tick
 				if delta_tick >= Chunk_Idle_Thresh {
@@ -146,12 +211,13 @@ update :: proc(world: ^World) {
 	}
 }
 
-update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
+update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int) {
 	for y := Chunk_Size - 1; y >= 0; y -= 1 {
-		if cy == Height_Chunk - 1 && y > Chunk_Size - 3 do continue
+		check_x, check_y := to_world_pos(cx, cy, 0, y)
+		if is_outside(check_x, check_y) do continue
 		start_x, end_x, step_x := 0, Chunk_Size, 1
 
-		if tick % 2 != 0 {
+		if world.tick % 2 != 0 {
 			start_x = Chunk_Size - 1
 			end_x = -1
 			step_x = -1
@@ -160,19 +226,21 @@ update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int, tick: u64) {
 		for x := start_x; x != end_x; x += step_x {
 			wx, wy := to_world_pos(cx, cy, x, y)
 
-			before := world.grid[idx(wx, wy)]
+			if is_outside(wx, wy) do continue
+			i := idx(wx, wy)
+			before := world.grid[i]
 
 			if update_cell(world, wx, wy) {
-				chunk.last_updated_tick = tick
-				now := world.grid[idx(wx, wy)]
-				if y == 0 && before != now {
-					to_wake_chunk(world.chunks, cx, cy - 1)
+				chunk.last_updated_tick = world.tick
+				after := world.grid[i]
+				if y == 0 && before != after {
+					to_wake_chunk(world, cx, cy - 1)
 				}
-				if x == 0 && before != now {
-					to_wake_chunk(world.chunks, cx - 1, cy)
+				if x == 0 && before != after {
+					to_wake_chunk(world, cx - 1, cy)
 				}
-				if x == Chunk_Size - 1 && before != now {
-					to_wake_chunk(world.chunks, cx + 1, cy)
+				if x == Chunk_Size - 1 && before != after {
+					to_wake_chunk(world, cx + 1, cy)
 				}
 			}
 		}
@@ -185,45 +253,48 @@ update_cell :: proc(world: ^World, x, y: int) -> bool {
 	vx := world.vel_x
 	vy := world.vel_y
 	grid := world.grid
-	config: Material_Config
-	if is_empty(grid, now) || is_hard(grid, now) {
+	config := world.config[grid[now]]
+	if is_empty(grid, now) || is_hard(grid, now) { 	//
 		vx[now] = 0
 		vy[now] = 0
 		return false
 	}
-	switch c in world.config[grid[now]] {
-	case Liquid_Config:
-		if is_dead(grid, x, y) {
-			// vy[now] *=
-			return false // skip possible dead cell
-		}
-	case Powder_Config:
-		if is_dead(grid, x, y) {
-			vy[now] *= c.damp
-			return false // skip possible dead cell
-		}
-		vy[now] = rl.Clamp(vy[now] + c.down_acc * f32(Dt), 0, Powder.Max_Vy)
-		vx[now] = rl.Clamp(vx[now], -Powder.Max_Vx, Powder.Max_Vx)
-		if move_down(world, c, x, y) do return true
-		if move_diagonal(world, c, x, y) do return true
-		if move_side(world, c, x, y) do return true
+	if is_dead(world, x, y) {
+		vy[now] *= config.damp
+		return false // skip possible dead cell
+	}
+	mat_type := config.type
+	#partial switch mat_type {
+	case .Powder:
+		vy[now] = rl.Clamp(vy[now] + config.down_acc * f32(Dt), 0, Powder.Max_Vy)
+		vx[now] = rl.Clamp(vx[now], 0, Powder.Max_Vx)
+		if move_down(world, config, x, y) do return true
+		if move_diagonal(world, config, x, y) do return true
+		if move_side(world, config, x, y) do return true
+	case .Liquid:
+		vy[now] = rl.Clamp(vy[now] + config.down_acc * f32(Dt), 0, Liquid.Max_Vy)
+		vx[now] = rl.Clamp(vx[now], 0, Liquid.Max_Vx)
+		if liquid_move_down(world, config, x, y) do return true
+		if liquid_move_side(world, x, y) do return true
 	}
 
 	return false
 }
 
-is_dead :: proc(grid: []Material, x, y: int) -> bool {
-	left := is_outside(x - 1, y) || is_solid(grid, idx(x - 1, y))
-	right := is_outside(x + 1, y) || is_solid(grid, idx(x + 1, y))
-	bottom := is_outside(x, y + 1) || is_solid(grid, idx(x, y + 1))
+is_dead :: proc(world: ^World, x, y: int) -> bool {
+	left := is_outside(x - 1, y) || is_solid(world, idx(x - 1, y))
+	right := is_outside(x + 1, y) || is_solid(world, idx(x + 1, y))
+	bottom := is_outside(x, y + 1) || is_solid(world, idx(x, y + 1))
 	return left && right && bottom
 }
 
 is_hard :: proc(grid: []Material, idx: int) -> bool {
 	return grid[idx] == .Cement
 }
-is_solid :: proc(grid: []Material, idx: int) -> bool {
-	return grid[idx] == .Sand || grid[idx] == .Cement
+is_solid :: proc(world: ^World, idx: int) -> (ok: bool) {
+	if is_hard(world.grid, idx) do return true
+	if world.config[world.grid[idx]].type == .Powder do return true
+	return false
 }
 
 is_liquid :: proc(grid: []Material, idx: int) -> bool {
@@ -238,21 +309,16 @@ random_side :: proc() -> int {
 	return int(rand.uint32() & 1) * 2 - 1
 }
 
-get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> rl.Color {
-	color: rl.Color
-	switch mat {
-	case .Cement:
-		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
-	case .Sand:
-		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
-	case .Dirt:
-		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
-	case .Water:
-		color = random_shade(get_material_base_color(mat), x, y, 10, 0)
+get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> (color: rl.Color) {
+	#partial switch mat {
 	case .Empty:
 		color = rl.BLACK
+	case:
+		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
+	case .Water:
+		color = rl.DARKBLUE
 	}
-	return color
+	return
 }
 
 get_material_base_color :: proc(mat: Material) -> rl.Color {

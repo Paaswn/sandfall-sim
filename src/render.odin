@@ -8,7 +8,7 @@ build_pixel_buf :: proc(game: ^Game) {
 	debug_mode := game.config.debug_mode
 	world := &game.world
 	buf := game.pixel_buf
-	#partial switch debug_mode {
+	switch debug_mode {
 	case .Velocity_Y:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
@@ -20,7 +20,7 @@ build_pixel_buf :: proc(game: ^Game) {
 			else do buf[idx] = get_vel_color(world.side[idx], world.vel_x[idx], sim.Powder.Max_Vx)
 		})
 
-	case:
+	case .Off:
 		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			buf[idx] = world.color[idx]
 		})
@@ -51,8 +51,8 @@ build_pixel :: proc(
 render_debug_chunk :: proc(world: ^sim.World) {
 	for chunk, i in world.chunks {
 		if chunk.active {
-			x := i % sim.Width_Chunk
-			y := i / sim.Width_Chunk
+			x := i % sim.Chunk_Per_Row
+			y := i / sim.Chunk_Per_Row
 			S := sim.Scale
 			CS := sim.Chunk_Size
 			rl.DrawRectangleLines(
@@ -146,13 +146,17 @@ render_brush :: proc(config: ^Game_Config, mouse: Mouse_State) {
 	}
 }
 
-get_vel_color :: proc(side: int, vel: f32, max: f32) -> rl.Color {
+get_vel_color :: proc(side: int, vel: f32, max: f32) -> (color: rl.Color) {
 	value := abs(vel / max)
 	if side > 0 {
 		new_r := u8(math.clamp(int(value * 255), 0, 255))
-		return rl.Color{new_r, 0, 0, 255}
-	} else {
+		color = rl.Color{new_r, 0, 0, 255}
+	} else if side < 0 {
 		new_g := u8(math.clamp(int(value * 255), 0, 255))
-		return rl.Color{0, new_g, 0, 255}
+		color = rl.Color{0, new_g, 0, 255}
+	} else {
+		new_b := u8(math.clamp(int(value * 255), 0, 255))
+		color = rl.Color{0, 0, new_b, 255}
 	}
+	return
 }

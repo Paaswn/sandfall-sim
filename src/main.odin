@@ -37,7 +37,7 @@ main :: proc() {
 		for acc >= sim.Dt {
 			event_listener(world, events)
 			world.tick += 1
-			sim.update(world)
+			sim.update_new(world)
 			acc -= sim.Dt
 		}
 		build_pixel_buf(&game)
@@ -45,7 +45,7 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
-		if config.debug_mode == .Chunk {
+		if sim.Show_Chunk {
 			render_debug_chunk(world)
 		}
 		render_brush(config, game.mouse)

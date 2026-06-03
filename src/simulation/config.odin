@@ -3,13 +3,14 @@ package simulation
 import "core:encoding/json"
 import "core:fmt"
 import "core:os"
+import "core:reflect"
 import rl "vendor:raylib"
 Debug :: enum {
 	Off,
 	Velocity_Y,
 	Velocity_X,
-	Chunk,
 }
+Show_Chunk := false
 Modifier_Key :: enum {
 	None,
 	Ctrl,
@@ -68,9 +69,9 @@ T_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
 // constant
 Config_Path :: "./config/world_config.json"
 Chunk_Size :: 16
-Width_Chunk :: (480 + 15) / Chunk_Size
-Height_Chunk :: (270 + 15) / Chunk_Size
-Max_Chunk_Idx :: Width_Chunk * Height_Chunk - 1
+Chunk_Per_Row :: (480 + Chunk_Size - 1) / Chunk_Size
+Chunk_Per_Column :: (270 + Chunk_Size - 1) / Chunk_Size
+Max_Chunk_Idx :: Chunk_Per_Row * Chunk_Per_Column - 1
 Chunk_Idle_Thresh :: 6
 Dt: f64 : 1.0 / 60.0
 Width :: 480
@@ -81,25 +82,30 @@ Brush_Size :: 4
 T_Scale :: 5
 Start_Mat :: Material.Sand
 // global material constant
+// fallback config will be generated using `generator.odin`
 Fallback_Conf: [Material]Material_Config = {
-	.Empty  = Powder_Config{},
-	.Sand   = Powder_Config{},
-	.Dirt   = Powder_Config{},
-	.Water  = Powder_Config{},
-	.Cement = Powder_Config{},
+	.Empty  = Material_Config{},
+	.Sand   = Material_Config{},
+	.Dirt   = Material_Config{},
+	.Water  = Material_Config{},
+	.Cement = Material_Config{},
 }
-load_world_config :: proc(path: string) -> World_Config {
+load_world_config :: proc(path: string) -> (res: World_Config) {
 	data, err := os.read_entire_file(path, context.allocator)
-	if err != nil {
-		panic(fmt.tprintfln("Failed to load file: %v", err))
-	}
+	if err != nil do panic(fmt.tprintfln("Failed to load file: %v", err))
 	defer delete(data)
-	config: World_Config
-	unmarshal_err := json.unmarshal(data, &config)
+	temp_map := make(map[string]Material_Config)
+	defer delete(temp_map)
+	unmarshal_err := json.unmarshal_any(data, &temp_map)
 	if unmarshal_err != nil {
-
 		fmt.eprintfln("Failed to parse config file, loaded fallback config")
 		return Fallback_Conf
 	}
-	return config
+	enum_arr: World_Config
+	for k, v in temp_map {
+		if var, ok := reflect.enum_from_name(Material, k); ok {
+			enum_arr[var] = v
+		}
+	}
+	return enum_arr
 }

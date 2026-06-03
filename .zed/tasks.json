@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Run Debug Build",
+    "command": "./run_debug",
+  },
+  {
+    "label": "Run Released Build",
+    "command": "./run_speed",
+  },
+]

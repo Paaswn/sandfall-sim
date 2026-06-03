@@ -98,7 +98,7 @@ track_input :: proc(game: ^Game) {
 		case .Debug_Velocity_X:
 			config.debug_mode = Debug.Velocity_X
 		case .Debug_Chunk:
-			config.debug_mode = Debug.Chunk
+			sim.Show_Chunk = !sim.Show_Chunk
 		case .Select_Sand:
 			config.current_mat = .Sand
 		case .Select_Empty:
