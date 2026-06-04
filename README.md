@@ -13,4 +13,4 @@ Ai usage can be found [here](#ai-usage)
 
 
 ## AI Usage
-Since this is a learning-focused project, There's almost no AI generated code here. I mainly use AI to discuss about ideas, debuging bugs, how to implement some parts of the simulation, and algorithms such as [Bresenham's algorithm](event.odin). If you find any weird bugs or low-quality code, they are on my stupid ahh 100%.
+Since this is a learning-focused project, There's almost no AI generated code here. I mainly use AI to discuss about ideas, debuging bugs, how to implement some parts of the simulation, and algorithms such as [Bresenham's algorithm](src/event.odin). If you find any weird bugs or low-quality code, they are on my stupid ahh 100%.

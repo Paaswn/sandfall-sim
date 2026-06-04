@@ -1,0 +1,2 @@
+#!/bin/bash
+odin run ./src -o:speed -out:sandfall
