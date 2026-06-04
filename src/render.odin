@@ -49,8 +49,8 @@ build_pixel :: proc(
 }
 
 render_debug_chunk :: proc(world: ^sim.World) {
-	for chunk, i in world.chunks {
-		if chunk.active {
+	for &chunk, i in world.chunks {
+		if sim.is_chunk_active(&chunk, world.tick) {
 			x := i % sim.Chunk_Per_Row
 			y := i / sim.Chunk_Per_Row
 			S := sim.Scale

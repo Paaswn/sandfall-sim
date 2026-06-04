@@ -36,9 +36,9 @@ main :: proc() {
 		track_input(&game)
 		for acc >= sim.Dt {
 			event_listener(world, events)
-			world.tick += 1
-			sim.update_new(world)
+			sim.update(world)
 			acc -= sim.Dt
+			world.tick += 1
 		}
 		build_pixel_buf(&game)
 		rl.UpdateTexture(texture, raw_data(pixel_buf))

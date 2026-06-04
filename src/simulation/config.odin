@@ -79,9 +79,11 @@ Height :: 270
 Gravity: f32 : 30
 Scale :: 4
 Brush_Size :: 4
-T_Scale :: 5
+Start_Time_Scale :: 5
 Start_Mat :: Material.Sand
 // global material constant
+Powder :: Material_Type_Config{8.0, 4.0}
+Liquid :: Material_Type_Config{10.0, 4.0}
 // fallback config will be generated using `generator.odin`
 Fallback_Conf: [Material]Material_Config = {
 	.Empty  = Material_Config{},

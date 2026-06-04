@@ -4,8 +4,8 @@ import "core:fmt"
 import "core:math"
 Chunk :: struct {
 	last_updated_tick: u32,
-	active_next:       bool,
-	active:            bool,
+	to_update_tick:    u32,
+	// active:            bool,
 }
 
 chunk_index_from_chunk_pos :: proc(x, y: int) -> int {
@@ -17,19 +17,16 @@ chunk_index_from_world_pos :: proc(x, y: int) -> int {
 	return cy * Chunk_Per_Row + cx
 }
 
-@(private)
 chunk_from_chunk_index :: proc(chunks: []Chunk, idx: int) -> ^Chunk {
 	return &chunks[idx]
 }
 
-@(private)
 chunk_from_world_pos :: proc(chunks: []Chunk, x, y: int) -> ^Chunk {
 	return &chunks[chunk_index_from_world_pos(x, y)]
 }
 
-get_chunk :: proc {
-	chunk_from_chunk_index,
-	chunk_from_world_pos,
+chunk_from_chunk_pos :: proc(chunks: []Chunk, x, y: int) -> ^Chunk {
+	return &chunks[chunk_index_from_chunk_pos(x, y)]
 }
 
 to_chunk_pos :: proc(x, y: int) -> (int, int) {
@@ -57,12 +54,25 @@ is_chunk_outside :: proc(x, y: int) -> bool {
 // }
 
 // auto clamping
-to_wake_chunk :: proc(world: ^World, cx, cy: int) {
+wake_chunk_next :: proc(world: ^World, cx, cy: int) {
 	x := math.clamp(cx, 0, Chunk_Per_Row - 1)
 	y := math.clamp(cy, 0, Chunk_Per_Column - 1)
-	idx := chunk_index_from_chunk_pos(x, y)
-	chunk := get_chunk(world.chunks, idx)
-	// chunk.active = true
-	chunk.active_next = true
+	chunk := chunk_from_chunk_pos(world.chunks, x, y)
+	chunk.to_update_tick = world.tick + 1
 	chunk.last_updated_tick = world.tick
+}
+
+// auto clamping
+wake_chunk_now :: proc(world: ^World, cx, cy: int) {
+	x := math.clamp(cx, 0, Chunk_Per_Row - 1)
+	y := math.clamp(cy, 0, Chunk_Per_Column - 1)
+	chunk := chunk_from_chunk_pos(world.chunks, x, y)
+	chunk.to_update_tick = world.tick
+	chunk.last_updated_tick = world.tick
+}
+
+// maybe turn this back to field but for now use proc instead
+is_chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
+	if chunk.to_update_tick == 0 && chunk.last_updated_tick == 0 do return false // this acts like initially all chunk.active feild with false
+	return ( chunk.to_update_tick == tick || tick - chunk.last_updated_tick <= 4 ) // force chunk update if last_updated tick is less than 5 anyway
 }

@@ -20,7 +20,7 @@ move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool
 		}
 		world.side[now] = side
 		cx, cy := to_chunk_pos(x + side, y + 1)
-		to_wake_chunk(world, cx, cy)
+		wake_chunk_next(world, cx, cy)
 		vx[next] = vx[now] * config.friction
 		vy[next] = vy[now] * config.friction
 		{
@@ -57,7 +57,7 @@ move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 		return false
 	}
 	cx, cy := to_chunk_pos(x + side, y)
-	to_wake_chunk(world, cx, cy)
+	wake_chunk_next(world, cx, cy)
 	vx[next] = vx[now] * config.friction
 	move_cell(world, next, now)
 	return true
@@ -97,17 +97,17 @@ move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 		if left, inside := world_index(x - 1, to_y); inside {
 			vx[left] += vy[now] * config.fall_drag
 			left_cx, left_cy := to_chunk_pos(x - 1, to_y)
-			to_wake_chunk(world, left_cx, left_cy)
+			wake_chunk_next(world, left_cx, left_cy)
 			get_friction = true
 		}
 		if right, inside := world_index(x + 1, to_y); inside {
 			vx[right] += vy[now] * config.fall_drag
 			right_cx, right_cy := to_chunk_pos(x + 1, to_y)
-			to_wake_chunk(world, right_cx, right_cy)
+			wake_chunk_next(world, right_cx, right_cy)
 			get_friction = true
 		}
 		if get_friction do vx[now] *= config.friction
-		to_wake_chunk(world, cx, cy)
+		wake_chunk_next(world, cx, cy)
 		move_cell(world, to, now)
 		return true
 	}

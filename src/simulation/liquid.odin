@@ -39,7 +39,7 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 			vx[now] *= config.friction
 		}
 
-		to_wake_chunk(world, cx, cy)
+		wake_chunk_next(world, cx, cy)
 		move_cell(world, to, now)
 		return true
 	}
@@ -77,7 +77,7 @@ liquid_move_side :: proc(world: ^World, x, y: int) -> bool {
 		vx[to] = vx[now]
 		vy[to] = vy[now]
 		cx, cy := to_chunk_pos(to_x, y)
-		to_wake_chunk(world, cx, cy)
+		wake_chunk_next(world, cx, cy)
 		move_cell(world, to, now)
 		return true
 	}

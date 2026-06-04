@@ -19,8 +19,6 @@ Material_Type_Config :: struct {
 	Max_Vx: f32,
 }
 
-Powder :: Material_Type_Config{8.0, 4.0}
-Liquid :: Material_Type_Config{10.0, 5.0}
 Material_Config :: struct {
 	type:           Material_Type,
 	down_acc:       f32,
@@ -110,9 +108,9 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	i := idx(x, y)
 	if world.grid[i] == material do return
 	world.updated[i] = world.tick
-	cx, cy := to_chunk_pos(x, y)
 	// to_wake_chunk(world, cx, cy - 1)
-	to_wake_chunk(world, cx, cy)
+	cx, cy := to_chunk_pos(x, y)
+	wake_chunk_now(world, cx, cy)
 	if world.config[material].type == .Liquid {
 		world.side[i] = random_side()
 	}
@@ -150,97 +148,48 @@ raw_move_cell :: proc(world: ^World, to, now: int) {
 	world.vel_y[now] = 0
 }
 
-update_new :: proc(world: ^World) {
-	y := Height - 1
-	skip := false
-	row: for y >= 0 {
-		if skip {
-			y -= Chunk_Size
-			skip = false
-		}
-		start_x, end_x, step_x := 0, Width, 1
-		if world.tick % 2 != 0 {
-			start_x = Width - 1
-			end_x = -1
-			step_x = -1
-		}
-		x := start_x
-		for x != end_x {
-			// cx, cy := to_chunk_pos(x, y)
-			// chunk := chunk_from_chunk_index(world.chunks, chunk_index_from_chunk_pos(x, y))
-			// if !chunk.active {
-			// 	if cx == 0 || cx == Chunk_Per_Row - 1 {skip = true; continue row}
-			// 	x += step_x * Chunk_Size
-			// 	continue
-			// }
-			update_cell(world, x, y)
-			// chunk.active_next = true
-			// delta_tick := world.tick - chunk.last_updated_tick
-			// if delta_tick >= Chunk_Idle_Thresh {
-			// 	chunk.active_next = false
-			// }
-			// chunk.active = chunk.active_next
-			x += step_x
-		}
-		y -= 1
-	}
-}
-
 update :: proc(world: ^World) {
 	for cy := Chunk_Per_Column - 1; cy >= 0; cy -= 1 {
-		start_cx, end_cx, step_cx := 0, Chunk_Per_Row, 1
-		if world.tick % 2 != 0 {
-			start_cx = Chunk_Per_Row - 1
-			end_cx = -1
-			step_cx = -1
-		}
-
-		for cx := start_cx; cx != end_cx; cx += step_cx {
-			chunk_idx := chunk_index_from_chunk_pos(cx, cy)
-			chunk := get_chunk(world.chunks, chunk_idx)
-			chunk.active = chunk.active_next
-			if chunk.active {
-				update_chunk(world, chunk, cx, cy)
-				chunk.active_next = true
-				delta_tick := world.tick - chunk.last_updated_tick
-				if delta_tick >= Chunk_Idle_Thresh {
-					chunk.active_next = false
-				}
+		local_row: for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1 {
+			start_cx, end_cx, step_cx := 0, Chunk_Per_Row, 1 // X chunk for-loop setup
+			start_lx, end_lx, step_lx := 0, Chunk_Size, 1 // local X for-loop loop setup
+			if world.tick % 2 != 0 {
+				// chunk X v
+				start_cx = Chunk_Per_Row - 1
+				end_cx = -1
+				step_cx = -1
+				// local X v
+				start_lx = Chunk_Size - 1
+				end_lx = -1
+				step_lx = -1
 			}
-		}
-	}
-}
+			chunk_col: for cx := start_cx; cx != end_cx; cx += step_cx {
+				for local_x := start_lx; local_x != end_lx; local_x += step_lx {
+					x, y := to_world_pos(cx, cy, local_x, local_y)
+					if is_outside(x, y) { 	// outside in this scope mean local y is too high
+						continue local_row
+					}
+					chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
+					if !is_chunk_active(chunk, world.tick) {
+						continue chunk_col
+					}
+					i := idx(x, y)
+					before := world.grid[i]
+					if update_cell(world, x, y) {
+						after := world.grid[i]
+						chunk.last_updated_tick = world.tick
+						chunk.to_update_tick = world.tick + 1
+						if local_y == 0 && before != after {
+							wake_chunk_next(world, cx, cy - 1)
+						}
+						if local_x == 0 && before != after {
+							wake_chunk_next(world, cx - 1, cy)
+						}
+						if local_x == Chunk_Size - 1 && before != after {
+							wake_chunk_next(world, cx + 1, cy)
+						}
+					}
 
-update_chunk :: proc(world: ^World, chunk: ^Chunk, cx, cy: int) {
-	for y := Chunk_Size - 1; y >= 0; y -= 1 {
-		check_x, check_y := to_world_pos(cx, cy, 0, y)
-		if is_outside(check_x, check_y) do continue
-		start_x, end_x, step_x := 0, Chunk_Size, 1
-
-		if world.tick % 2 != 0 {
-			start_x = Chunk_Size - 1
-			end_x = -1
-			step_x = -1
-		}
-
-		for x := start_x; x != end_x; x += step_x {
-			wx, wy := to_world_pos(cx, cy, x, y)
-
-			if is_outside(wx, wy) do continue
-			i := idx(wx, wy)
-			before := world.grid[i]
-
-			if update_cell(world, wx, wy) {
-				chunk.last_updated_tick = world.tick
-				after := world.grid[i]
-				if y == 0 && before != after {
-					to_wake_chunk(world, cx, cy - 1)
-				}
-				if x == 0 && before != after {
-					to_wake_chunk(world, cx - 1, cy)
-				}
-				if x == Chunk_Size - 1 && before != after {
-					to_wake_chunk(world, cx + 1, cy)
 				}
 			}
 		}
