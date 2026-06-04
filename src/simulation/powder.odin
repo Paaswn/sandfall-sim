@@ -5,20 +5,7 @@ import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
-powder_update :: proc(world: ^World, config: Material_Config, x, y: int) -> (done: bool) {
-	vx := world.vel_x
-	vy := world.vel_y
-	now := idx(x, y) // always in border no need to check
-	vy[now] = rl.Clamp(vy[now] + config.down_acc * f32(Dt), 0, Powder.Max_Vy)
-	vx[now] = rl.Clamp(vx[now], 0, Powder.Max_Vx)
-	done = false
-	if powder_move_down(world, config, x, y) do done = true
-	else if powder_move_diagonal(world, config, x, y) do done = true
-	else if powder_move_side(world, config, x, y) do done = true
-	return false
-}
 // randomly move down-left or down-right, will try to transfer some velocity to its below cell on a success tick
-@(private)
 powder_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	vx := world.vel_x
@@ -51,7 +38,6 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) 
 }
 
 // randomly move left or right, will try to transfer some velocity to the obstacle on a failed tick
-@(private)
 powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y
@@ -80,7 +66,6 @@ powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 }
 
 // move down based on vy value, will transfer some velocity to left-and-right cell
-@(private)
 powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y

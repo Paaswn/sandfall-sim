@@ -300,11 +300,11 @@ update_cell_side :: proc(world: ^World, x, y: int) -> bool {
 }
 
 is_dead :: proc(world: ^World, x, y: int) -> bool {
-	up := is_outside(x, y - 1) || is_solid(world, idx(x, y - 1))
+	// up := is_outside(x, y - 1) || is_solid(world, idx(x, y - 1))
 	left := is_outside(x - 1, y) || is_solid(world, idx(x - 1, y))
 	right := is_outside(x + 1, y) || is_solid(world, idx(x + 1, y))
 	bottom := is_outside(x, y + 1) || is_solid(world, idx(x, y + 1))
-	return left && right && bottom && up
+	return left && right && bottom 
 }
 
 is_hard :: proc(grid: []Material, idx: int) -> bool {
@@ -340,22 +340,20 @@ get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> (color: rl.Co
 	return
 }
 
-get_material_base_color :: proc(mat: Material) -> rl.Color {
-	to_return: rl.Color
+get_material_base_color :: proc(mat: Material) -> (color: rl.Color ) {
 	switch mat {
 	case .Empty:
-		to_return = rl.BLACK
+		color = rl.BLACK
 	case .Sand:
-		to_return = rl.BEIGE
+		color = rl.BEIGE
 	case .Dirt:
-		to_return = rl.BROWN
+		color = rl.BROWN
 	case .Cement:
-		to_return = rl.DARKGRAY
+		color = rl.DARKGRAY
 	case .Water:
-		to_return = rl.BLUE
-
+		color = rl.BLUE
 	}
-	return to_return
+	return
 }
 
 random_shade :: proc(base: rl.Color, x, y, variance: int, salt: u64) -> rl.Color {

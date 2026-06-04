@@ -2,21 +2,7 @@ package simulation
 
 import "core:fmt"
 import "core:math"
-import rl "vendor:raylib"
 
-liquid_update :: proc(world: ^World, config: Material_Config, x, y: int) -> (done: bool) {
-	grid := world.grid
-	vy := world.vel_y
-	vx := world.vel_x
-	now := idx(x, y)
-	vy[now] = rl.Clamp(vy[now] + config.down_acc * f32(Dt), 0, Liquid.Max_Vy)
-	vx[now] = rl.Clamp(vx[now], 0, Liquid.Max_Vx)
-	done = false
-	if liquid_move_down(world, config, x, y) do done = true
-	else if liquid_move_side(world, x, y) do done = true
-	return 
-}
-@(private)
 liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y
@@ -99,7 +85,7 @@ liquid_move_side :: proc(world: ^World, x, y: int) -> bool {
 	return false
 }
 
-@(private)
+@(private="file")
 hittable :: proc(world: ^World, idx: int) -> bool {
 	return is_solid(world, idx) || is_liquid(world.grid, idx)
 }
