@@ -3,8 +3,23 @@ package simulation
 
 import "core:fmt"
 import "core:math"
+import rl "vendor:raylib"
+
+powder_update :: proc(world: ^World, config: Material_Config, x, y: int) -> (done: bool) {
+	vx := world.vel_x
+	vy := world.vel_y
+	now := idx(x, y) // always in border no need to check
+	vy[now] = rl.Clamp(vy[now] + config.down_acc * f32(Dt), 0, Powder.Max_Vy)
+	vx[now] = rl.Clamp(vx[now], 0, Powder.Max_Vx)
+	done = false
+	if powder_move_down(world, config, x, y) do done = true
+	else if powder_move_diagonal(world, config, x, y) do done = true
+	else if powder_move_side(world, config, x, y) do done = true
+	return false
+}
 // randomly move down-left or down-right, will try to transfer some velocity to its below cell on a success tick
-move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+@(private)
+powder_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	vx := world.vel_x
 	vy := world.vel_y
@@ -36,7 +51,8 @@ move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool
 }
 
 // randomly move left or right, will try to transfer some velocity to the obstacle on a failed tick
-move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+@(private)
+powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
@@ -64,7 +80,8 @@ move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 }
 
 // move down based on vy value, will transfer some velocity to left-and-right cell
-move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+@(private)
+powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
@@ -98,12 +115,14 @@ move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 			vx[left] += vy[now] * config.fall_drag
 			left_cx, left_cy := to_chunk_pos(x - 1, to_y)
 			wake_chunk_next(world, left_cx, left_cy)
+			world.side[left] = world.side[now]
 			get_friction = true
 		}
 		if right, inside := world_index(x + 1, to_y); inside {
 			vx[right] += vy[now] * config.fall_drag
 			right_cx, right_cy := to_chunk_pos(x + 1, to_y)
 			wake_chunk_next(world, right_cx, right_cy)
+			world.side[right] = world.side[now]
 			get_friction = true
 		}
 		if get_friction do vx[now] *= config.friction

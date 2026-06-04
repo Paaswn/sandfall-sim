@@ -15,8 +15,8 @@ Material :: enum u8 {
 }
 
 Material_Type_Config :: struct {
-	Max_Vy: f32,
-	Max_Vx: f32,
+	Max_Vy:      f32,
+	Max_Vx:      f32,
 }
 
 Material_Config :: struct {
@@ -31,12 +31,14 @@ Material_Config :: struct {
 	slide_drag:     f32,
 	fall_drag:      f32,
 }
+
 Material_Type :: enum {
 	Liquid, // move without thresh (side/slide thresh =0)
 	Powder, // move with thresh
 	Hard, // static material that can't be damaged by any game object
 	Semi_Hard, // static material that can be slightly damaged by game object
 }
+
 World :: struct {
 	tick:    u32,
 	vel_x:   []f32,
@@ -150,94 +152,159 @@ raw_move_cell :: proc(world: ^World, to, now: int) {
 
 update :: proc(world: ^World) {
 	for cy := Chunk_Per_Column - 1; cy >= 0; cy -= 1 {
-		local_row: for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1 {
-			start_cx, end_cx, step_cx := 0, Chunk_Per_Row, 1 // X chunk for-loop setup
-			start_lx, end_lx, step_lx := 0, Chunk_Size, 1 // local X for-loop loop setup
-			if world.tick % 2 != 0 {
-				// chunk X v
-				start_cx = Chunk_Per_Row - 1
-				end_cx = -1
-				step_cx = -1
-				// local X v
-				start_lx = Chunk_Size - 1
-				end_lx = -1
-				step_lx = -1
-			}
-			chunk_col: for cx := start_cx; cx != end_cx; cx += step_cx {
-				chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
-				if !is_chunk_active(chunk, world.tick) {
-					continue 
+			local_row: for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1 {
+				start_cx, end_cx, step_cx := 0, Chunk_Per_Row, 1 // X chunk for-loop setup
+				start_lx, end_lx, step_lx := 0, Chunk_Size, 1 // local X for-loop loop setup
+				if world.tick % 2 != 0 {
+					// chunk X v
+					start_cx = Chunk_Per_Row - 1
+					end_cx = -1
+					step_cx = -1
+					// local X v
+					start_lx = Chunk_Size - 1
+					end_lx = -1
+					step_lx = -1
 				}
-				for local_x := start_lx; local_x != end_lx; local_x += step_lx {
-					x, y := to_world_pos(cx, cy, local_x, local_y)
-					if y >= World_Height { 	// outside in this scope mean local y is too high
-						continue local_row
-					}
-					if x >= World_Width {
+				for cx := start_cx; cx != end_cx; cx += step_cx {
+					chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
+					if !is_chunk_active(chunk, world.tick) {
 						continue
 					}
-					i := idx(x, y)
-					before := world.grid[i]
-					if update_cell(world, x, y) {
-						after := world.grid[i]
-						chunk.last_updated_tick = world.tick
-						chunk.to_update_tick = world.tick + 1
-						if local_y == 0 && before != after {
-							wake_chunk_next(world, cx, cy - 1)
+					 for local_x := start_lx; local_x != end_lx; local_x += step_lx {
+						x, y := to_world_pos(cx, cy, local_x, local_y)
+						if y >= World_Height { 	// outside in this scope mean local y is too high
+							continue local_row
 						}
-						if local_x == 0 && before != after {
-							wake_chunk_next(world, cx - 1, cy)
+						if x >= World_Width {
+							continue
 						}
-						if local_x == Chunk_Size - 1 && before != after {
-							wake_chunk_next(world, cx + 1, cy)
+						i := idx(x, y)
+						before := world.grid[i]
+						if update_cell_vertical(world, x, y) {
+							after := world.grid[i]
+							chunk.last_updated_tick = world.tick
+							chunk.to_update_tick = world.tick + 1
+							if local_y == 0 && before != after {
+								wake_chunk_next(world, cx, cy - 1)
+							}
+							if local_x == 0 && before != after {
+								wake_chunk_next(world, cx - 1, cy)
+							}
+							if local_x == Chunk_Size - 1 && before != after {
+								wake_chunk_next(world, cx + 1, cy)
+							}
 						}
-					}
 
+					}
+				}
+				for cx := start_cx; cx != end_cx; cx += step_cx {
+					chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
+					if !is_chunk_active(chunk, world.tick) {
+						continue
+					}
+					 for local_x := start_lx; local_x != end_lx; local_x += step_lx {
+						x, y := to_world_pos(cx, cy, local_x, local_y)
+						if y >= World_Height { 	// outside in this scope mean local y is too high
+							continue local_row
+						}
+						if x >= World_Width {
+							continue
+						}
+						i := idx(x, y)
+						before := world.grid[i]
+						if update_cell_side(world, x, y) {
+							after := world.grid[i]
+							chunk.last_updated_tick = world.tick
+							chunk.to_update_tick = world.tick + 1
+							if local_y == 0 && before != after {
+								wake_chunk_next(world, cx, cy - 1)
+							}
+							if local_x == 0 && before != after {
+								wake_chunk_next(world, cx - 1, cy)
+							}
+							if local_x == Chunk_Size - 1 && before != after {
+								wake_chunk_next(world, cx + 1, cy)
+							}
+						}
+
+					}
 				}
 			}
 		}
-	}
 }
 
-update_cell :: proc(world: ^World, x, y: int) -> bool {
+Update_Context :: struct {
+	mat_type : Material_Type,
+	now : int,
+	config : Material_Config,
+}
+
+prepare_cell_update :: proc(world: ^World, x, y: int) -> (ctx: Update_Context, ok: bool) {
 	now := idx(x, y) // always in border no need to check
-	if world.tick == world.updated[now] do return false
+	if world.tick == world.updated[now] do return {} , false
 	vx := world.vel_x
 	vy := world.vel_y
 	grid := world.grid
 	config := world.config[grid[now]]
-	if is_empty(grid, now) || is_hard(grid, now) { 	//
+	if is_empty(grid, now) || is_hard(grid, now) {
 		vx[now] = 0
 		vy[now] = 0
-		return false
+		return {}, false
 	}
 	if is_dead(world, x, y) {
 		vy[now] *= config.damp
-		return false // skip possible dead cell
+		return {}, false // skip possible dead cell
 	}
 	mat_type := config.type
-	#partial switch mat_type {
-	case .Powder:
-		vy[now] = rl.Clamp(vy[now] + config.down_acc * f32(Dt), 0, Powder.Max_Vy)
-		vx[now] = rl.Clamp(vx[now], 0, Powder.Max_Vx)
-		if move_down(world, config, x, y) do return true
-		if move_diagonal(world, config, x, y) do return true
-		if move_side(world, config, x, y) do return true
-	case .Liquid:
-		vy[now] = rl.Clamp(vy[now] + config.down_acc * f32(Dt), 0, Liquid.Max_Vy)
-		vx[now] = rl.Clamp(vx[now], 0, Liquid.Max_Vx)
-		if liquid_move_down(world, config, x, y) do return true
-		if liquid_move_side(world, x, y) do return true
-	}
+	return {mat_type, now, config}, true
+}
 
+apply_gravity :: proc(world: ^World, mat_config: Material_Config, mat_type_config: Material_Type_Config, now: int) {
+	vx := world.vel_x
+	vy := world.vel_y
+	vy[now] = rl.Clamp(vy[now] + mat_config.down_acc * f32(Dt), 0, mat_type_config.Max_Vy)
+	vx[now] = rl.Clamp(vx[now], 0, mat_type_config.Max_Vx)
+}
+
+update_cell_vertical :: proc(world: ^World, x, y: int) -> bool {
+	if ctx, ok := prepare_cell_update(world,x ,y); ok {
+		now := ctx.now
+		config := ctx.config
+		mat_type := ctx.mat_type
+		#partial switch mat_type {
+		case .Powder:
+			apply_gravity(world, config, Powder ,now)
+			if powder_move_down(world, config, x, y) do return true
+		case .Liquid:
+			apply_gravity(world, config, Liquid, now)
+			if liquid_move_down(world, config, x, y) do return true
+		}
+	}
+	return false
+}
+
+update_cell_side :: proc(world: ^World, x, y: int) -> bool {
+	if ctx, ok := prepare_cell_update(world,x ,y); ok {
+		now := ctx.now
+		config := ctx.config
+		mat_type := ctx.mat_type
+		#partial switch mat_type {
+		case .Powder:
+			if powder_move_diagonal(world, config, x, y) do return true
+			if powder_move_side(world, config, x, y) do return true
+		case .Liquid:
+			if liquid_move_side(world, x, y) do return true
+		}
+	}
 	return false
 }
 
 is_dead :: proc(world: ^World, x, y: int) -> bool {
+	up := is_outside(x, y - 1) || is_solid(world, idx(x, y - 1))
 	left := is_outside(x - 1, y) || is_solid(world, idx(x - 1, y))
 	right := is_outside(x + 1, y) || is_solid(world, idx(x + 1, y))
 	bottom := is_outside(x, y + 1) || is_solid(world, idx(x, y + 1))
-	return left && right && bottom
+	return left && right && bottom && up
 }
 
 is_hard :: proc(grid: []Material, idx: int) -> bool {

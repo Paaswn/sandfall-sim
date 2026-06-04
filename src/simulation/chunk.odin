@@ -43,16 +43,6 @@ is_chunk_outside :: proc(x, y: int) -> bool {
 	return x < 0 || x > Chunk_Per_Row - 1 || y < 0 || y > Chunk_Per_Column - 1
 }
 
-// deprecated
-// wake_neighbor_chunk :: proc(chunks: []Chunk, origin_x, origin_y, off: int) {
-// 	cx, cy := to_chunk_pos(origin_x, origin_y)
-// 	for y in cy - off ..= cy + off {
-// 		for x in cx - off ..= cx + off {
-// 			to_wake_chunk(chunks, x, y)
-// 		}
-// 	}
-// }
-
 // auto clamping
 wake_chunk_next :: proc(world: ^World, cx, cy: int) {
 	x := math.clamp(cx, 0, Chunk_Per_Row - 1)
