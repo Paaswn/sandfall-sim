@@ -293,6 +293,7 @@ update_cell_side :: proc(world: ^World, x, y: int) -> bool {
 			if powder_move_diagonal(world, config, x, y) do return true
 			if powder_move_side(world, config, x, y) do return true
 		case .Liquid:
+			// if liquid_move_diagonal(world, x, y) do return true
 			if liquid_move_side(world, x, y) do return true
 		}
 	}

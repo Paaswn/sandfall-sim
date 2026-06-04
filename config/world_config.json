@@ -25,9 +25,9 @@
   },
   "Water": {
     "type": "Liquid",
-    "down_acc": 20,
+    "down_acc": 30,
     "slide_thresh": 0,
-    "side_thresh": 0.3,
+    "side_thresh": 0.2,
     "friction": 0.98,
     "damp": 0.3,
     "impact_to_side": 0.9,

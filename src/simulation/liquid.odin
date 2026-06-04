@@ -85,6 +85,19 @@ liquid_move_side :: proc(world: ^World, x, y: int) -> bool {
 	return false
 }
 
+// liquid_move_diagonal :: proc(world: ^World, x, y: int) -> bool {
+// 	grid := world.grid
+// 	now := idx(x, y)
+// 	vx := world.vel_x
+// 	vy := world.vel_y
+// 	side := world.side[now]
+// 	to := world_index(x+side, y+1) or_return
+// 	if hittable(world, to) do return false
+// 	vx[to] = vx[now]
+// 	vy[to] = vy[now]
+// 	move_cell(world, to, now)
+// 	return true
+// }
 @(private="file")
 hittable :: proc(world: ^World, idx: int) -> bool {
 	return is_solid(world, idx) || is_liquid(world.grid, idx)
