@@ -74,8 +74,8 @@ Chunk_Per_Column :: (270 + Chunk_Size - 1) / Chunk_Size
 Max_Chunk_Idx :: Chunk_Per_Row * Chunk_Per_Column - 1
 Chunk_Idle_Thresh :: 6
 Dt: f64 : 1.0 / 60.0
-Width :: 480
-Height :: 270
+World_Width :: 480
+World_Height :: 270
 Gravity: f32 : 30
 Scale :: 4
 Brush_Size :: 4

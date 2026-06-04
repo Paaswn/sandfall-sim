@@ -53,13 +53,13 @@ World_Config :: [Material]Material_Config
 create_world :: proc() -> World {
 	return World {
 		0,
-		make([]f32, Width * Height),
-		make([]f32, Width * Height),
-		make([]Material, Width * Height),
-		make([]rl.Color, Width * Height),
+		make([]f32, World_Width * World_Height),
+		make([]f32, World_Width * World_Height),
+		make([]Material, World_Width * World_Height),
+		make([]rl.Color, World_Width * World_Height),
 		make([]Chunk, Chunk_Per_Row * Chunk_Per_Column),
-		make([]u32, Width * Height),
-		make([]int, Width * Height),
+		make([]u32, World_Width * World_Height),
+		make([]int, World_Width * World_Height),
 		load_world_config(Config_Path),
 	}
 }
@@ -75,7 +75,7 @@ delete_world :: proc(world: ^World) {
 }
 
 idx :: proc(x, y: int) -> int {
-	return y * Width + x
+	return y * World_Width + x
 }
 
 world_index :: proc(x, y: int) -> (index: int, inside: bool) {
@@ -84,7 +84,7 @@ world_index :: proc(x, y: int) -> (index: int, inside: bool) {
 	return
 }
 is_outside :: proc(x, y: int) -> bool {
-	return x < 0 || y < 0 || x > Width - 1 || y > Height - 1
+	return x < 0 || y < 0 || x > World_Width - 1 || y > World_Height - 1
 }
 
 circle_brush_spawn :: proc(world: ^World, ox, oy, r: int, material: Material) {
@@ -164,14 +164,17 @@ update :: proc(world: ^World) {
 				step_lx = -1
 			}
 			chunk_col: for cx := start_cx; cx != end_cx; cx += step_cx {
+				chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
+				if !is_chunk_active(chunk, world.tick) {
+					continue 
+				}
 				for local_x := start_lx; local_x != end_lx; local_x += step_lx {
 					x, y := to_world_pos(cx, cy, local_x, local_y)
-					if is_outside(x, y) { 	// outside in this scope mean local y is too high
+					if y >= World_Height { 	// outside in this scope mean local y is too high
 						continue local_row
 					}
-					chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
-					if !is_chunk_active(chunk, world.tick) {
-						continue chunk_col
+					if x >= World_Width {
+						continue
 					}
 					i := idx(x, y)
 					before := world.grid[i]

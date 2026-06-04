@@ -6,11 +6,11 @@ import rl "vendor:raylib"
 
 main :: proc() {
 	// raylib window init
-	rl.InitWindow(sim.Width * sim.Scale, sim.Height * sim.Scale, "sandfall")
+	rl.InitWindow(sim.World_Width * sim.Scale, sim.World_Height * sim.Scale, "sandfall")
 	rl.SetTargetFPS(120)
 	rl.HideCursor()
 	// create a texture buffer
-	image := rl.GenImageColor(sim.Width, sim.Height, rl.BLACK)
+	image := rl.GenImageColor(sim.World_Width, sim.World_Height, rl.BLACK)
 	texture := rl.LoadTextureFromImage(image)
 	rl.UnloadImage(image)
 	defer rl.UnloadTexture(texture)

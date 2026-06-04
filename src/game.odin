@@ -39,7 +39,7 @@ create_game :: proc() -> Game {
 		sim.create_world(),
 		Game_Config{sim.Brush_Size, sim.Start_Time_Scale, sim.Debug.Off, sim.Start_Mat, sim.Scale},
 		make_event_queues(),
-		make([]rl.Color, sim.Width * sim.Height),
+		make([]rl.Color, sim.World_Width * sim.World_Height),
 		Mouse_State{mouse_pos, mouse_world(mouse_pos), mouse_world(mouse_pos), .None, false},
 	}
 }
