@@ -75,10 +75,11 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	if !inside || is_solid(world, below) do return false
 	step := int(math.clamp(vy[now], 1, Powder.Max_Vy))
 	to_y := y
+	through_liquid := false
 	for s in 1 ..= step {
 		next_y := y + s
-		next, inside := world_index(x, next_y)
-		if !inside || is_solid(world, next) {
+		next, ok := world_index(x, next_y)
+		if !ok || is_solid(world, next) {
 			if vy[now] >= config.impact_thresh {
 				// this the only place where newly create cell will get its first vx value
 				// try picking the preferred side for this cell
@@ -88,6 +89,10 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 			vy[now] *= config.damp
 			break
 		}
+		if ok && is_liquid(grid, next) {
+			vy[now] *= config.damp
+			through_liquid = true
+		}
 		to_y = next_y
 	}
 	if to_y != y {
@@ -95,24 +100,28 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		vx[to] = vx[now]
 		vy[to] = vy[now]
 		cx, cy := to_chunk_pos(x, to_y)
-		get_friction := false
-		if left, inside := world_index(x - 1, to_y); inside {
-			vx[left] += vy[now] * config.fall_drag
-			left_cx, left_cy := to_chunk_pos(x - 1, to_y)
-			wake_chunk_next(world, left_cx, left_cy)
-			world.side[left] = world.side[now]
-			get_friction = true
-		}
-		if right, inside := world_index(x + 1, to_y); inside {
-			vx[right] += vy[now] * config.fall_drag
-			right_cx, right_cy := to_chunk_pos(x + 1, to_y)
-			wake_chunk_next(world, right_cx, right_cy)
-			world.side[right] = world.side[now]
-			get_friction = true
-		}
-		if get_friction do vx[now] *= config.friction
 		wake_chunk_next(world, cx, cy)
-		move_cell(world, to, now)
+		if !through_liquid {
+			get_friction := false
+			if left, inside := world_index(x - 1, to_y); inside && is_solid(world, left) {
+				vx[left] += vy[now] * config.fall_drag
+				left_cx, left_cy := to_chunk_pos(x - 1, to_y)
+				wake_chunk_next(world, left_cx, left_cy)
+				world.side[left] = world.side[now]
+				get_friction = true
+			}
+			if right, inside := world_index(x + 1, to_y); inside && is_solid(world, right) {
+				vx[right] += vy[now] * config.fall_drag
+				right_cx, right_cy := to_chunk_pos(x + 1, to_y)
+				wake_chunk_next(world, right_cx, right_cy)
+				world.side[right] = world.side[now]
+				get_friction = true
+			}
+			if get_friction do vx[now] *= config.friction
+			move_cell(world, to, now)
+		} else {
+			swap_cell(world, to, now)
+		}
 		return true
 	}
 	return false

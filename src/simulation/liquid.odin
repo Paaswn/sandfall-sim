@@ -30,15 +30,15 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		vx[to] = vx[now]
 		vy[to] = vy[now]
 		cx, cy := to_chunk_pos(x, to_y)
-		switch {
-		case is_outside(x - 1, to_y):
-		case is_outside(x + 1, to_y):
-		case is_solid(world, idx(x - 1, to_y)) || is_solid(world, idx(x + 1, to_y)):
-			left, right := idx(x - 1, to_y), idx(x + 1, to_y)
-			vx[left] += vy[now] * config.fall_drag
-			vx[right] += vy[now] * config.fall_drag
-			vx[now] *= config.friction
-		}
+		// switch {
+		// case is_outside(x - 1, to_y):
+		// case is_outside(x + 1, to_y):
+		// case is_solid(world, idx(x - 1, to_y)) || is_solid(world, idx(x + 1, to_y)):
+		// 	left, right := idx(x - 1, to_y), idx(x + 1, to_y)
+		// 	vx[left] += vy[now] * config.fall_drag
+		// 	vx[right] += vy[now] * config.fall_drag
+		// 	vx[now] *= config.friction
+		// }
 
 		wake_chunk_next(world, cx, cy)
 		move_cell(world, to, now)

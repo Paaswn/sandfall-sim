@@ -125,29 +125,24 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 // only move material, color, active state, and reset old position values
 //
 // **doesn't move velocity**
-move_cell :: proc(world: ^World, to, from: int) {
-	world.grid[to] = world.grid[from]
-	world.grid[from] = .Empty
-	raw_move_cell(world, to, from)
-}
-
 swap_cell :: proc(world: ^World, to, from: int) {
-	from_cell := world.grid[from]
-	to_cell := world.grid[to]
-	world.grid[to] = from_cell
-	world.grid[from] = to_cell
-	raw_move_cell(world, to, from)
+	// move cell
+	world.grid[to], world.grid[from] = world.grid[from], world.grid[to]
+	world.updated[to] = world.tick
+	world.side[to], world.side[from] = world.side[from], world.side[to]
+	world.color[to], world.color[from] = world.color[from], world.color[to]
+	// move vel
+	world.vel_x[from] = world.vel_x[to]
+	world.vel_y[from] = world.vel_y[to]
 
 }
-@(private)
-raw_move_cell :: proc(world: ^World, to, now: int) {
+move_cell :: proc(world: ^World, to, from: int) {
+	world.grid[to], world.grid[from] = world.grid[from], .Empty
 	world.updated[to] = world.tick
-	world.side[to] = world.side[now]
-	world.side[now] = 0
-	world.color[to] = world.color[now]
-	world.color[now] = get_material_base_color(.Empty)
-	world.vel_x[now] = 0
-	world.vel_y[now] = 0
+	world.side[to], world.side[from] = world.side[from], 0
+	world.color[to], world.color[from] = world.color[from], get_material_base_color(.Empty)
+	world.vel_x[from] = 0
+	world.vel_y[from] = 0
 }
 
 update :: proc(world: ^World) {
