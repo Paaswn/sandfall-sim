@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:math"
 import sim "simulation"
 import rl "vendor:raylib"
@@ -10,41 +11,43 @@ build_pixel_buf :: proc(game: ^Game) {
 	buf := game.pixel_buf
 	switch debug_mode {
 	case .Velocity_Y:
-		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
+		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
+			if world.config[ world.grid[idx] ].type == .Powder do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
+			else if world.config[ world.grid[idx] ].type == .Liquid do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Liquid.Max_Vy)
 		})
 	case .Velocity_X:
-		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
+		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else do buf[idx] = get_vel_color(world.side[idx], world.vel_x[idx], sim.Powder.Max_Vx)
+			else if world.config[ world.grid[idx] ].type == .Powder do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Powder.Max_Vx)
+			else if world.config[ world.grid[idx] ].type == .Liquid do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Liquid.Max_Vx)
 		})
 
 	case .Off:
-		build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
+		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			buf[idx] = world.color[idx]
 		})
-	// build_pixel(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
-	// 	if world.active[idx] {
-	// 		buf[idx] = rl.GREEN
-	// 	} else if world.grid[idx] == .Empty {
-	// 		buf[idx] = rl.BLACK
-	// 	} else {
-	// 		buf[idx] = rl.DARKGRAY
-	// 	}
-	// jk
-	// })
 	}
 
 }
-
-build_pixel :: proc(
+build_pixel_index :: proc(
 	world: ^sim.World,
 	buf: []rl.Color,
 	fill_color: proc(idx: int, buf: []rl.Color, world: ^sim.World),
 ) {
 	for _, idx in world.grid {
 		fill_color(idx, buf, world)
+	}
+}
+build_pixel_pos :: proc(
+	world: ^sim.World,
+	buf: []rl.Color,
+	fill_color: proc(x, y: int, buf: []rl.Color, world: ^sim.World),
+) {
+	for y in 0 ..< sim.World_Height {
+		for x in 0 ..< sim.World_Width {
+			fill_color(x, y, buf, world)
+		}
 	}
 }
 

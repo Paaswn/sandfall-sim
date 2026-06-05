@@ -25,13 +25,16 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) 
 		wake_chunk_next(world, cx, cy)
 		vx[next] = vx[now] * config.friction
 		vy[next] = vy[now] * config.friction
-		{
-			if check, inside := world_index(x, y + 1); inside && is_solid(world, check) {
-				vx[check] += math.max(vx[now], vy[now]) * config.slide_drag
-				world.side[check] = world.side[now]
-			}
+		if check, ok := world_index(x, y + 1); ok && is_solid(world, check) {
+			vx[check] += math.max(vx[now], vy[now]) * config.slide_drag
+			world.side[check] = world.side[now]
 		}
-		move_cell(world, next, now)
+		if is_liquid(grid, next) {
+			vx[next] *= config.friction
+			swap_cell(world, next, now)
+		} else {
+			move_cell(world, next, now)
+		}
 		return true
 	}
 	return false
@@ -61,7 +64,12 @@ powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	cx, cy := to_chunk_pos(x + side, y)
 	wake_chunk_next(world, cx, cy)
 	vx[next] = vx[now] * config.friction
-	move_cell(world, next, now)
+	if is_liquid(grid, next) {
+		vx[next] *= config.damp
+		swap_cell(world, next, now)
+	} else {
+		move_cell(world, next, now)
+	}
 	return true
 }
 
@@ -73,6 +81,9 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	now := idx(x, y)
 	below, inside := world_index(x, y + 1)
 	if !inside || is_solid(world, below) do return false
+	if vy[now] < 1 do return false
+	// if is_liquid(grid, below) && vy[now] < config.slide_thresh do return false 
+	// try move side if we in water and has vy below threshold
 	step := int(math.clamp(vy[now], 1, Powder.Max_Vy))
 	to_y := y
 	through_liquid := false
@@ -90,7 +101,7 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 			break
 		}
 		if ok && is_liquid(grid, next) {
-			vy[now] *= config.damp
+			vy[now] *= config.friction
 			through_liquid = true
 		}
 		to_y = next_y
@@ -125,4 +136,15 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		return true
 	}
 	return false
+}
+
+blend :: proc(dst, src: rl.Color, alpha: f32) -> rl.Color {
+	inv := 1.0 - alpha
+
+	return rl.Color {
+		u8(f32(dst.r) * inv + f32(src.r) * alpha),
+		u8(f32(dst.g) * inv + f32(src.g) * alpha),
+		u8(f32(dst.b) * inv + f32(src.b) * alpha),
+		255,
+	}
 }

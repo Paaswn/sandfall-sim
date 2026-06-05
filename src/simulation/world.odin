@@ -247,7 +247,7 @@ prepare_cell_update :: proc(world: ^World, x, y: int) -> (ctx: Update_Context, o
 		return {}, false
 	}
 	if is_dead(world, x, y) {
-		vy[now] *= config.damp
+		// vy[now] *= config.damp
 		return {}, false // skip possible dead cell
 	}
 	mat_type := config.type
