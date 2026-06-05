@@ -9,7 +9,7 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	vx := world.vel_x
 	now := idx(x, y)
 	if is_outside(x, y + 1) || hittable(world, idx(x, y + 1)) do return false
-	if vy[now] < 1.5 do return false
+	if vy[now] < Liquid.Vy_Thresh do return false
 	step := int(math.clamp(vy[now], 1, Powder.Max_Vy))
 	to_y := y
 	for s in 1 ..= step {

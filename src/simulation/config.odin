@@ -82,8 +82,13 @@ Brush_Size :: 4
 Start_Time_Scale :: 5
 Start_Mat :: Material.Sand
 // global material constant
-Powder :: Material_Type_Config{8.0, 4.0}
-Liquid :: Material_Type_Config{10.0, 8.0}
+Material_Type_Config :: struct {
+	Vy_Thresh: f32,
+	Max_Vy:    f32,
+	Max_Vx:    f32,
+}
+Powder :: Material_Type_Config{1, 8.0, 4.0}
+Liquid :: Material_Type_Config{1.5, 10.0, 8.0}
 // fallback config will be generated using `generator.odin`
 Fallback_Conf: [Material]Material_Config = {
 	.Empty  = Material_Config{},

@@ -14,11 +14,6 @@ Material :: enum u8 {
 	Water,
 }
 
-Material_Type_Config :: struct {
-	Max_Vy:      f32,
-	Max_Vx:      f32,
-}
-
 Material_Config :: struct {
 	type:           Material_Type,
 	down_acc:       f32,

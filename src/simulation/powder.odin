@@ -81,7 +81,7 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	now := idx(x, y)
 	below, inside := world_index(x, y + 1)
 	if !inside || is_solid(world, below) do return false
-	if vy[now] < 1 do return false
+	if vy[now] < Powder.Vy_Thresh do return false
 	// if is_liquid(grid, below) && vy[now] < config.slide_thresh do return false 
 	// try move side if we in water and has vy below threshold
 	step := int(math.clamp(vy[now], 1, Powder.Max_Vy))
