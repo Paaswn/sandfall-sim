@@ -35,8 +35,27 @@ build_pixel_index :: proc(
 	buf: []rl.Color,
 	fill_color: proc(idx: int, buf: []rl.Color, world: ^sim.World),
 ) {
-	for _, idx in world.grid {
-		fill_color(idx, buf, world)
+	when ODIN_DEBUG {
+		for _, idx in world.grid {
+			fill_color(idx, buf, world)
+		}
+	} else {
+		for cy in 0..<sim.Chunk_Per_Column {
+			for cx in 0..<sim.Chunk_Per_Row {
+				if !sim.is_chunk_active( sim.chunk_from_chunk_pos(world.chunks, cx, cy), world.tick ) {
+					continue
+				}
+				for local_y in 0..<sim.Chunk_Size {
+					for local_x in 0..<sim.Chunk_Size {
+						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
+						if idx, ok := sim.world_index(x, y); ok {
+							buf[idx] = world.color[idx]
+						}
+					}
+				}
+			}
+		}
+		
 	}
 }
 build_pixel_pos :: proc(
