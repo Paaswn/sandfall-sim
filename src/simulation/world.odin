@@ -175,13 +175,13 @@ update :: proc(world: ^World) {
 							chunk.last_updated_tick = world.tick
 							chunk.to_update_tick = world.tick + 1
 							if local_y == 0 && before != after {
-								wake_chunk_next(world, cx, cy - 1)
+								wake_chunk_now(world, cx, cy - 1)
 							}
 							if local_x == 0 && before != after {
-								wake_chunk_next(world, cx - 1, cy)
+								wake_chunk_now(world, cx - 1, cy)
 							}
 							if local_x == Chunk_Size - 1 && before != after {
-								wake_chunk_next(world, cx + 1, cy)
+								wake_chunk_now(world, cx + 1, cy)
 							}
 						}
 
@@ -207,13 +207,13 @@ update :: proc(world: ^World) {
 							chunk.last_updated_tick = world.tick
 							chunk.to_update_tick = world.tick + 1
 							if local_y == 0 && before != after {
-								wake_chunk_next(world, cx, cy - 1)
+								wake_chunk_now(world, cx, cy - 1)
 							}
 							if local_x == 0 && before != after {
-								wake_chunk_next(world, cx - 1, cy)
+								wake_chunk_now(world, cx - 1, cy)
 							}
 							if local_x == Chunk_Size - 1 && before != after {
-								wake_chunk_next(world, cx + 1, cy)
+								wake_chunk_now(world, cx + 1, cy)
 							}
 						}
 
