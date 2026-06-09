@@ -1,7 +1,7 @@
-package main
+package game
 
 import "core:fmt"
-import sim "simulation"
+import sim "../simulation"
 import rl "vendor:raylib"
 
 Event_Queues :: struct {
@@ -136,7 +136,7 @@ create_spawn_point :: proc(mouse: ^Mouse_State, events: ^Event_Queues, config: ^
 			2 * se.r,
 			2 * se.r,
 			mouse.world.x - config.brush_size,
-			mouse.world.y - config.brush_size,
+			 mouse.world.y - config.brush_size,
 			config.brush_size * 2,
 			config.brush_size * 2,
 		) {

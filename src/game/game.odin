@@ -1,9 +1,7 @@
-package main
+package game
 
 import "core:fmt"
-import "core:os"
-import "core:time"
-import sim "simulation"
+import sim "../simulation"
 import rl "vendor:raylib"
 
 Game :: struct {
@@ -14,6 +12,7 @@ Game :: struct {
 	mouse:     Mouse_State,
 }
 
+// maybe add mouse click here
 Mouse_State :: struct {
 	pos:         rl.Vector2,
 	world:       [2]int,
