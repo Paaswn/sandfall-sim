@@ -6,9 +6,9 @@ import rl "vendor:raylib"
 
 Event_Queues :: struct {
 	spawn:       [dynamic]Spawn_Event,
-	spawn_perm:  map[int]Spawn_Point,
+	spawn_points:  map[int]Spawn_Point,
 	hot_reload:  bool,
-	spawn_point: int,
+	point_spawned: int,
 }
 Material :: sim.Material
 World :: sim.World
@@ -36,7 +36,7 @@ make_event_queues :: proc() -> Event_Queues {
 
 delete_event_queues :: proc(queues: ^Event_Queues) {
 	delete(queues.spawn)
-	delete(queues.spawn_perm)
+	delete(queues.spawn_points)
 }
 
 clear_queues :: proc(events: ^Event_Queues) {
@@ -47,7 +47,7 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	for se in events.spawn {
 		brush_line(world, se)
 	}
-	for _, se in events.spawn_perm {
+	for _, se in events.spawn_points {
 		sim.circle_brush_spawn(world, se.x0, se.y0, se.r, se.material)
 	}
 	if events.hot_reload {
@@ -58,78 +58,8 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	clear_queues(events)
 }
 
-track_input :: proc(game: ^Game) {
-	events := &game.events
-	config := &game.config
-	mouse := &game.mouse
-	material_spawn_handler(&events.spawn, mouse, config)
-	actions: for input, action in sim.Key_Binds {
-		for mod in input.modifer {
-			switch mod {
-			case .None:
-				if rl.IsKeyDown(.LEFT_CONTROL) ||
-				   rl.IsKeyDown(.LEFT_SHIFT) ||
-				   rl.IsKeyDown(.LEFT_ALT) {
-					continue actions
-				}
-			case .Ctrl:
-				if !rl.IsKeyDown(.LEFT_CONTROL) {
-					continue actions
-				}
-			case .Shift:
-				if !rl.IsKeyDown(.LEFT_SHIFT) {
-					continue actions
-				}
-			case .Alt:
-				if !rl.IsKeyDown(.LEFT_ALT) {
-					continue actions
-				}
-			}
-		}
-		if input.mouse_wheel != mouse.wheel do continue
-		if !rl.IsKeyPressed(input.trigger) && input.trigger != .KEY_NULL {
-			continue
-		}
-		switch action {
-		case .Debug_Off:
-			config.debug_mode = Debug.Off
-		case .Debug_Velocity_Y:
-			config.debug_mode = Debug.Velocity_Y
-		case .Debug_Velocity_X:
-			config.debug_mode = Debug.Velocity_X
-		case .Debug_Chunk:
-			sim.Show_Chunk = !sim.Show_Chunk
-		case .Select_Sand:
-			config.current_mat = .Sand
-		case .Select_Empty:
-			config.current_mat = .Empty
-		case .Select_Cement:
-			config.current_mat = .Cement
-		case .Select_Dirt:
-			config.current_mat = .Dirt
-		case .Select_Water:
-			config.current_mat = .Water
-		case .Increase_Tick:
-			config.time_scale += 1
-			if config.time_scale >= len(sim.T_Scales) - 1 do config.time_scale = len(sim.T_Scales) - 1
-		case .Decrease_Tick:
-			config.time_scale -= 1
-			if config.time_scale <= 0 do config.time_scale = 0
-		case .Increase_Brush_Size:
-			config.brush_size += 1
-		case .Decrease_Brush_Size:
-			config.brush_size -= 1
-			if config.brush_size <= 1 do config.brush_size = 1
-		case .Make_Spawn_Point:
-			create_spawn_point(mouse, events, config)
-		case .Hot_Reload:
-			if !events.hot_reload do events.hot_reload = true
-		}
-	}
-}
-
 create_spawn_point :: proc(mouse: ^Mouse_State, events: ^Event_Queues, config: ^Game_Config) {
-	for _, se in events.spawn_perm {
+	for _, se in events.spawn_points {
 		if intersect(
 			se.x0 - se.r,
 			se.y0 - se.r,
@@ -140,17 +70,17 @@ create_spawn_point :: proc(mouse: ^Mouse_State, events: ^Event_Queues, config: ^
 			config.brush_size * 2,
 			config.brush_size * 2,
 		) {
-			events.spawn_point -= 1
-			delete_key(&events.spawn_perm, se.point)
+			events.point_spawned -= 1
+			delete_key(&events.spawn_points, se.point)
 			return
 		}
 	}
-	events.spawn_point += 1
+	events.point_spawned += 1
 	map_insert(
-		&events.spawn_perm,
-		events.spawn_point,
+		&events.spawn_points,
+		events.point_spawned,
 		Spawn_Point {
-			events.spawn_point,
+			events.point_spawned,
 			mouse.world.x,
 			mouse.world.y,
 			config.brush_size,
@@ -164,7 +94,7 @@ intersect :: proc(x0, y0, w0, h0, x1, y1, w1, h1: int) -> bool {
 	return true
 }
 
-material_spawn_handler :: proc(
+mouse_handler :: proc(
 	spawn: ^[dynamic]Spawn_Event,
 	mouse: ^Mouse_State,
 	config: ^Game_Config,
