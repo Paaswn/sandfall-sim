@@ -15,13 +15,15 @@ main :: proc() {
 	rl.UnloadImage(image)
 	defer rl.UnloadTexture(texture)
 
-	// create game session
-	game := create_game()
-	defer delete_game(&game)
-	world := &game.world
-	events := &game.events
-	pixel_buf := game.pixel_buf
-	config := &game.config
+	// create instance session
+
+	instance : game.Game
+	game.create_game(&instance)
+	defer game.delete_game(&instance)
+	world := &instance.world
+	events := &instance.events
+	pixel_buf := instance.pixel_buf
+	config := &instance.config
 	TS := sim.T_Scales
 
 	// main loop
