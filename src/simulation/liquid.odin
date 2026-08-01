@@ -20,6 +20,7 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 				// try picking the preferred side for this cell
 				vx[now] = vy[now] * config.impact_to_side
 				if world.side[now] == 0 do world.side[now] = random_side()
+				else if random_side() > 0 do world.side[now] *= -1
 			}
 			vy[now] *= config.damp
 			break
@@ -47,12 +48,12 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	}
 	return false
 }
-liquid_move_side :: proc(world: ^World, x, y: int) -> bool {
+liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
 	now := idx(x, y)
 	vx := world.vel_x
 	vy := world.vel_y
-	step := int(math.clamp(vx[now], 0, Powder.Max_Vx))
+	step := int(math.clamp(vx[now], 0, Liquid.Max_Vx))
 	side := world.side[now]
 	to_x := x
 	for s in 1 ..= step {
@@ -67,7 +68,7 @@ liquid_move_side :: proc(world: ^World, x, y: int) -> bool {
 			check := idx(x - side, y)
 			if !(is_outside(x - side, y) || hittable(world, check)) {
 				world.side[now] *= -1
-				vx[now] *= 0.98
+				vx[now] *= config.friction
 			}
 			break
 		}
@@ -86,20 +87,20 @@ liquid_move_side :: proc(world: ^World, x, y: int) -> bool {
 	return false
 }
 
-// liquid_move_diagonal :: proc(world: ^World, x, y: int) -> bool {
-// 	grid := world.grid
-// 	now := idx(x, y)
-// 	vx := world.vel_x
-// 	vy := world.vel_y
-// 	side := world.side[now]
-// 	to := world_index(x+side, y+1) or_return
-// 	if hittable(world, to) do return false
-// 	vx[to] = vx[now]
-// 	vy[to] = vy[now]
-// 	move_cell(world, to, now)
-// 	return true
-// }
-@(private="file")
+liquid_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+	grid := world.grid
+	now := idx(x, y)
+	vx := world.vel_x
+	vy := world.vel_y
+	side := world.side[now]
+	to := world_index(x + side, y + 1) or_return
+	if hittable(world, to) do return false
+	vx[to] = vx[now]
+	vy[to] = vy[now]
+	move_cell(world, to, now)
+	return true
+}
+@(private = "file")
 hittable :: proc(world: ^World, idx: int) -> bool {
 	return is_solid(world, idx) || is_liquid(world.grid, idx)
 }

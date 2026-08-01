@@ -9,9 +9,9 @@ import rl "vendor:raylib"
 Material :: enum u8 {
 	Empty,
 	Sand,
-	Dirt,
 	Cement,
 	Water,
+	Dirt,
 }
 
 Material_Config :: struct {
@@ -202,7 +202,7 @@ update :: proc(world: ^World) {
 						}
 						i := idx(x, y)
 						before := world.grid[i]
-						if update_cell_side(world, x, y) {
+						if update_cell_side(world,x ,y) {
 							after := world.grid[i]
 							chunk.last_updated_tick = world.tick
 							chunk.to_update_tick = world.tick + 1
@@ -283,8 +283,8 @@ update_cell_side :: proc(world: ^World, x, y: int) -> bool {
 			if powder_move_diagonal(world, config, x, y) do return true
 			if powder_move_side(world, config, x, y) do return true
 		case .Liquid:
-			// if liquid_move_diagonal(world, x, y) do return true
-			if liquid_move_side(world, x, y) do return true
+			if liquid_move_diagonal(world, config, x, y) do return true
+			if liquid_move_side(world,config,  x, y) do return true
 		}
 	}
 	return false
@@ -295,7 +295,7 @@ is_dead :: proc(world: ^World, x, y: int) -> bool {
 	left := is_outside(x - 1, y) || is_solid(world, idx(x - 1, y))
 	right := is_outside(x + 1, y) || is_solid(world, idx(x + 1, y))
 	bottom := is_outside(x, y + 1) || is_solid(world, idx(x, y + 1))
-	return left && right && bottom 
+	return left && right && bottom
 }
 
 is_hard :: proc(grid: []Material, idx: int) -> bool {
