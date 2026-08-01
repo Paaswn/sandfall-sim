@@ -1,7 +1,7 @@
 package game
 
-import "core:fmt"
 import sim "../simulation"
+import "core:fmt"
 import rl "vendor:raylib"
 
 Game :: struct {
@@ -10,15 +10,16 @@ Game :: struct {
 	events:    Event_Queues,
 	pixel_buf: []rl.Color,
 	mouse:     Mouse_State,
+	debug_ui:  Ui,
 }
 
 // maybe add mouse click here
 Mouse_State :: struct {
-	pos:         rl.Vector2,
-	world:       [2]int,
-	prev_world:  [2]int,
-	wheel: sim.Wheel_State,
-	has_prev:    bool,
+	pos:        rl.Vector2,
+	world:      [2]int,
+	prev_world: [2]int,
+	wheel:      Wheel_State,
+	has_prev:   bool,
 }
 
 update_mouse_state :: proc(mouse: ^Mouse_State) {
@@ -29,18 +30,18 @@ update_mouse_state :: proc(mouse: ^Mouse_State) {
 	else if rl.GetMouseWheelMove() > 0 do mouse.wheel = .Up
 	else do mouse.wheel = .None
 }
+
 hot_reload :: proc(world: ^sim.World) {
 	world.config = sim.load_world_config(sim.Config_Path)
 }
-create_game :: proc() -> Game {
-	mouse_pos := rl.GetMousePosition()
-	return Game {
-		sim.create_world(),
-		Game_Config{sim.Brush_Size, sim.Start_Time_Scale, sim.Debug.Off, sim.Start_Mat, sim.Scale},
-		make_event_queues(),
-		make([]rl.Color, sim.World_Width * sim.World_Height),
-		Mouse_State{mouse_pos, mouse_world(mouse_pos), mouse_world(mouse_pos), .None, false},
-	}
+
+create_game :: proc(instance: ^Game) {
+		instance.world = sim.create_world()
+		instance.config = Game_Config{sim.Brush_Size, sim.Start_Time_Scale, sim.Debug.Off, false, sim.Start_Mat, sim.Scale}
+		instance.events = make_event_queues()
+		instance.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
+		instance.mouse = Mouse_State{{}, {}, {}, .None, false}
+		instance.debug_ui = create_ui()
 }
 
 mouse_world :: proc(mouse_pos: rl.Vector2) -> [2]int {
@@ -53,13 +54,14 @@ delete_game :: proc(game: ^Game) {
 	sim.delete_world(&game.world)
 	delete_event_queues(&game.events)
 	delete(game.pixel_buf)
+	delete_ui(&game.debug_ui)
 }
 
-
 Game_Config :: struct {
-	brush_size:  int,
-	time_scale:  int,
-	debug_mode:  sim.Debug,
-	current_mat: Material,
-	window_scale: int
+	brush_size:   int,
+	time_scale:   i32,
+	debug_render:   sim.Debug,
+	show_chunk_border: bool,
+	current_mat:  Material,
+	window_scale: int,
 }
