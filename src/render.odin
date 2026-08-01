@@ -2,25 +2,29 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "game"
 import sim "simulation"
 import rl "vendor:raylib"
 
+Game :: game.Game
+Game_Config :: game.Game_Config
+Mouse_State :: game.Mouse_State
 build_pixel_buf :: proc(game: ^Game) {
-	debug_mode := game.config.debug_mode
+	debug_mode := game.config.debug_render
 	world := &game.world
 	buf := game.pixel_buf
 	switch debug_mode {
 	case .Velocity_Y:
 		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			if world.config[ world.grid[idx] ].type == .Powder do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
-			else if world.config[ world.grid[idx] ].type == .Liquid do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Liquid.Max_Vy)
+			if world.config[world.grid[idx]].type == .Powder do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
+			else if world.config[world.grid[idx]].type == .Liquid do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Liquid.Max_Vy)
 		})
 	case .Velocity_X:
 		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else if world.config[ world.grid[idx] ].type == .Powder do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Powder.Max_Vx)
-			else if world.config[ world.grid[idx] ].type == .Liquid do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Liquid.Max_Vx)
+			else if world.config[world.grid[idx]].type == .Powder do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Powder.Max_Vx)
+			else if world.config[world.grid[idx]].type == .Liquid do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Liquid.Max_Vx)
 		})
 
 	case .Off:
@@ -40,13 +44,17 @@ build_pixel_index :: proc(
 			fill_color(idx, buf, world)
 		}
 	} else {
-		for cy in 0..<sim.Chunk_Per_Column {
-			for cx in 0..<sim.Chunk_Per_Row {
-				if !sim.is_chunk_active( sim.chunk_from_chunk_pos(world.chunks, cx, cy), world.tick ) {
+		// only render alive chunks
+		for cy in 0 ..< sim.Chunk_Per_Column {
+			for cx in 0 ..< sim.Chunk_Per_Row {
+				if !sim.is_chunk_active(
+					sim.chunk_from_chunk_pos(world.chunks, cx, cy),
+					world.tick,
+				) {
 					continue
 				}
-				for local_y in 0..<sim.Chunk_Size {
-					for local_x in 0..<sim.Chunk_Size {
+				for local_y in 0 ..< sim.Chunk_Size {
+					for local_x in 0 ..< sim.Chunk_Size {
 						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
 						if idx, ok := sim.world_index(x, y); ok {
 							buf[idx] = world.color[idx]
@@ -55,7 +63,7 @@ build_pixel_index :: proc(
 				}
 			}
 		}
-		
+
 	}
 }
 build_pixel_pos :: proc(
@@ -134,7 +142,7 @@ render_debug_chunk :: proc(world: ^sim.World) {
 // 	}
 // }
 
-render_brush :: proc(config: ^Game_Config, mouse: Mouse_State) {
+render_brush :: proc(config: ^Game_Config, mouse: ^Mouse_State) {
 
 	rl.DrawRectangle(
 		i32(mouse.world.x * sim.Scale),
