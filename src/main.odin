@@ -1,7 +1,9 @@
 package main
 
+import "game"
 import sim "simulation"
 import rl "vendor:raylib"
+import "core:fmt"
 
 
 main :: proc() {
@@ -29,32 +31,49 @@ main :: proc() {
 	// main loop
 	prev := rl.GetTime()
 	acc: f64 = 0
+
 	for !rl.WindowShouldClose() {
+
 		now := rl.GetTime()
 		dt := now - prev
 		acc += dt * TS[config.time_scale]
 		prev = now
-		update_mouse_state(&game.mouse)
-		track_input(&game)
+		game.update_mouse_state(&instance.mouse)
+		if !rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.bound) || !instance.debug_ui.show {
+			game.mouse_handler(&events.spawn, &instance.mouse, config)
+		} else {
+			instance.mouse.has_prev = false
+		}
+
+		game.keyboard_handler(&instance)
+
 		for acc >= sim.Dt {
-			event_listener(world, events)
+			game.event_listener(world, events)
 			sim.update(world)
 			acc -= sim.Dt
 			world.tick += 1
 		}
-		build_pixel_buf(&game)
+
+		build_pixel_buf(&instance)
 		rl.UpdateTexture(texture, raw_data(pixel_buf))
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
-		if sim.Show_Chunk {
+
+		if config.show_chunk_border {
 			render_debug_chunk(world)
 		}
-		render_brush(config, game.mouse)
+
+		if instance.debug_ui.show {
+			game.ui_draw(&instance)
+		}
+
+		render_brush(config, &instance.mouse)
 		rl.DrawFPS(10, 10)
 		rl.EndDrawing()
 	}
 }
+
 
 on_window_resize :: proc() {
 	if rl.IsWindowResized() {
