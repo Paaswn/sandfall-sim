@@ -58,7 +58,7 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	clear_queues(events)
 }
 
-create_spawn_point :: proc(mouse: ^Mouse_State, events: ^Event_Queues, config: ^Game_Config) {
+create_spawn_point :: proc(mouse: ^Mouse, events: ^Event_Queues, config: ^Game_Config) {
 	for _, se in events.spawn_points {
 		if intersect(
 			se.x0 - se.r,
@@ -96,7 +96,7 @@ intersect :: proc(x0, y0, w0, h0, x1, y1, w1, h1: int) -> bool {
 
 mouse_handler :: proc(
 	spawn: ^[dynamic]Spawn_Event,
-	mouse: ^Mouse_State,
+	mouse: ^Mouse,
 	config: ^Game_Config,
 ) {
 	if rl.IsMouseButtonDown(.LEFT) {

@@ -8,7 +8,7 @@ import rl "vendor:raylib"
 
 Game :: game.Game
 Game_Config :: game.Game_Config
-Mouse_State :: game.Mouse_State
+Mouse_State :: game.Mouse
 build_pixel_buf :: proc(game: ^Game) {
 	debug_mode := game.config.debug_render
 	world := &game.world

@@ -9,12 +9,12 @@ Game :: struct {
 	config:    Game_Config,
 	events:    Event_Queues,
 	pixel_buf: []rl.Color,
-	mouse:     Mouse_State,
+	mouse:     Mouse,
 	debug_ui:  Ui,
 }
 
 // maybe add mouse click here
-Mouse_State :: struct {
+Mouse :: struct {
 	pos:        rl.Vector2,
 	world:      [2]int,
 	prev_world: [2]int,
@@ -22,7 +22,7 @@ Mouse_State :: struct {
 	has_prev:   bool,
 }
 
-update_mouse_state :: proc(mouse: ^Mouse_State) {
+update_mouse_state :: proc(mouse: ^Mouse) {
 	mouse_pos := rl.GetMousePosition()
 	mouse.world = mouse_world(mouse_pos)
 	mouse.pos = mouse_pos
@@ -40,7 +40,7 @@ create_game :: proc(instance: ^Game) {
 		instance.config = Game_Config{sim.Brush_Size, sim.Start_Time_Scale, sim.Debug.Off, false, sim.Start_Mat, sim.Scale}
 		instance.events = make_event_queues()
 		instance.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
-		instance.mouse = Mouse_State{{}, {}, {}, .None, false}
+		instance.mouse = Mouse{{}, {}, {}, .None, false}
 		instance.debug_ui = create_ui()
 }
 
