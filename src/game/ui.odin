@@ -73,22 +73,8 @@ draw_ui :: proc(instance: ^Game) {
 
 	rl.GuiCheckBox({20, 190, 50, 25}, "Show Chunk Border", &conf.show_chunk_border)
 
-	ui_draw_next(dbg_ui, proc() {
-	})
 }
 
-ui_draw_first :: proc(manager: ^Ui_Manager) {
-	
-}
-
-ui_draw_next :: proc(manager: ^Ui_Manager, ui_elem: proc()) {
-	ui_elem()
-}
-
-ui_draw_last :: proc(manager: ^Ui_Manager) {
-	rl.DrawRectangleRoundedLines(manager.bound, 0.1, 20, rl.WHITE)
-	manager.bound = {20,20, 100, 100}
-}
 material_list_selector :: #force_inline proc(conf: ^Game_Config, dbg_ui: ^Ui_Manager, rect: rl.Rectangle) {
 	mat_as_int := i32( conf.current_mat )
 	selected := rl.GuiListView(rect,  dbg_ui.mat_select.choices, &dbg_ui.mat_select.scroll_index, &mat_as_int)
