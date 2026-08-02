@@ -45,10 +45,10 @@ build_pixel_index :: proc(
 		}
 	} else {
 		// only render alive chunks
-		for cy in 0 ..< sim.Chunk_Per_Column {
-			for cx in 0 ..< sim.Chunk_Per_Row {
+		for cy in 0 ..< sim.Width_In_Chunk {
+			for cx in 0 ..< sim.Width_In_Chunk {
 				if !sim.is_chunk_active(
-					sim.chunk_from_chunk_pos(world.chunks, cx, cy),
+					sim.chunk_from_chunk_pos(world.chunk_manager.chunks, cx, cy),
 					world.tick,
 				) {
 					continue
@@ -79,10 +79,10 @@ build_pixel_pos :: proc(
 }
 
 render_debug_chunk :: proc(world: ^sim.World) {
-	for &chunk, i in world.chunks {
+	for &chunk, i in world.chunk_manager.chunks {
 		if sim.is_chunk_active(&chunk, world.tick) {
-			x := i % sim.Chunk_Per_Row
-			y := i / sim.Chunk_Per_Row
+			x := i % sim.Width_In_Chunk
+			y := i / sim.Width_In_Chunk
 			S := sim.Scale
 			CS := sim.Chunk_Size
 			rl.DrawRectangleLines(

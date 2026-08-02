@@ -50,7 +50,7 @@ main :: proc() {
 
 		for acc >= sim.Dt {
 			game.event_listener(world, events)
-			sim.update(world)
+			sim.update_grid(world)
 			sim.update_particles(&world.particles)
 			acc -= sim.Dt
 			world.tick += 1

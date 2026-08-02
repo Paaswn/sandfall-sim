@@ -11,7 +11,7 @@ World :: struct {
 	vel_y:   []f32,
 	grid:    []Material, // will be packed into mat id
 	color:   []rl.Color,
-	chunks:  []Chunk,
+	chunk_manager:  Chunk_Manager,
 	updated: []u32,
 	side:    []int, // will be packed inside mat id
 	particles: [dynamic]Particle,
@@ -22,13 +22,15 @@ World :: struct {
 World_Config :: [Material]Material_Config
 
 create_world :: proc() -> World {
+	chunk_manager: Chunk_Manager
+	init_chunk_manager(&chunk_manager)
 	return World {
 		0,
 		make([]f32, World_Width * World_Height),
 		make([]f32, World_Width * World_Height),
 		make([]Material, World_Width * World_Height),
 		make([]rl.Color, World_Width * World_Height),
-		make([]Chunk, Chunk_Per_Row * Chunk_Per_Column),
+		chunk_manager,
 		make([]u32, World_Width * World_Height),
 		make([]int, World_Width * World_Height),
 		make([dynamic]Particle, 128),
@@ -41,7 +43,7 @@ delete_world :: proc(world: ^World) {
 	delete(world.vel_y)
 	delete(world.grid)
 	delete(world.color)
-	delete(world.chunks)
+	delete_chunk_manager(&world.chunk_manager)
 	delete(world.updated)
 	delete(world.particles)
 	delete(world.side)
@@ -56,6 +58,7 @@ world_index :: proc(x, y: int) -> (index: int, inside: bool) {
 	index = idx(x, y)
 	return
 }
+
 is_outside :: proc(x, y: int) -> bool {
 	return x < 0 || y < 0 || x > World_Width - 1 || y > World_Height - 1
 }
@@ -75,15 +78,14 @@ circle_brush_spawn :: proc(world: ^World, ox, oy, r: int, material: Material) {
 	}
 }
 
-
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	@static total_spawn: u64 = 0
 	i := idx(x, y)
 	if world.grid[i] == material do return
 	world.updated[i] = world.tick
-	// to_wake_chunk(world, cx, cy - 1)
 	cx, cy := to_chunk_pos(x, y)
-	wake_chunk_now(world, cx, cy)
+	put_chunk_in_queue(world, cx, cy)
+	// wake_chunk_now(world, cx, cy)
 	if world.config[material].type == .Liquid {
 		world.side[i] = random_side()
 	}
@@ -107,6 +109,7 @@ swap_cell :: proc(world: ^World, to, from: int) {
 	world.vel_y[from] = world.vel_y[to]
 
 }
+
 move_cell :: proc(world: ^World, to, from: int) {
 	world.grid[to], world.grid[from] = world.grid[from], .Empty
 	world.updated[to] = world.tick
@@ -116,14 +119,68 @@ move_cell :: proc(world: ^World, to, from: int) {
 	world.vel_y[from] = 0
 }
 
+
+update_grid :: proc(world: ^World) {
+	c_man := &world.chunk_manager
+	// fmt.println(c_man.active_even_chunk[:], c_man.active_odd_chunk[:] )
+	#reverse for cidx, i in c_man.active_even_chunk {
+		loop_through_chunk(world, cidx)
+		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+			unordered_remove_dynamic_array(&c_man.active_even_chunk, i)
+		}
+	}
+	#reverse for cidx, i in c_man.active_odd_chunk {
+		loop_through_chunk(world, cidx)
+		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+			unordered_remove_dynamic_array(&c_man.active_odd_chunk, i)
+		}
+	}
+}
+
+loop_through_chunk :: #force_inline proc(world: ^World, cidx: int) {
+	updated := false
+	for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1  {
+		for local_x in 0..<Chunk_Size {
+			cx, cy := chunk_idx_to_chunk_pos(cidx)
+			x, y := to_world_pos(cx, cy, local_x, local_y)
+			if y >= World_Height{
+				return
+			}
+			if x >= World_Width {
+				continue
+			}
+
+			i := idx(x, y)
+			before := world.grid[i]
+			if update_cell_vertical(world, x, y) || update_cell_side(world, x, y) {
+				after := world.grid[i]
+				if local_y == 0 && before != after {
+					put_chunk_in_queue(world, cx, cy - 1)
+				}
+				if local_x == 0 && before != after {
+					put_chunk_in_queue(world, cx-1, cy)
+				}
+				if local_x == Chunk_Size - 1 && before != after {
+					put_chunk_in_queue(world, cx + 1, cy)
+				}
+				updated = true
+			}
+		}
+	}
+	if updated {
+		chunk :=  world.chunk_manager.chunks[cidx]
+		chunk.last_updated_tick = world.tick
+	}
+}
+
 update :: proc(world: ^World) {
-	for cy := Chunk_Per_Column - 1; cy >= 0; cy -= 1 {
+	for cy := Height_In_Chunk - 1; cy >= 0; cy -= 1 {
 			local_row: for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1 {
-				start_cx, end_cx, step_cx := 0, Chunk_Per_Row, 1 // X chunk for-loop setup
+				start_cx, end_cx, step_cx := 0, Width_In_Chunk, 1 // X chunk for-loop setup
 				start_lx, end_lx, step_lx := 0, Chunk_Size, 1 // local X for-loop loop setup
 				if world.tick % 2 != 0 {
 					// chunk X v
-					start_cx = Chunk_Per_Row - 1
+					start_cx = Width_In_Chunk - 1
 					end_cx = -1
 					step_cx = -1
 					// local X v
@@ -132,7 +189,7 @@ update :: proc(world: ^World) {
 					step_lx = -1
 				}
 				for cx := start_cx; cx != end_cx; cx += step_cx {
-					chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
+					chunk := chunk_from_chunk_pos(world.chunk_manager.chunks, cx, cy)
 					if !is_chunk_active(chunk, world.tick) {
 						continue
 					}
@@ -164,7 +221,7 @@ update :: proc(world: ^World) {
 					}
 				}
 				for cx := start_cx; cx != end_cx; cx += step_cx {
-					chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
+					chunk := chunk_from_chunk_pos(world.chunk_manager.chunks, cx, cy)
 					if !is_chunk_active(chunk, world.tick) {
 						continue
 					}

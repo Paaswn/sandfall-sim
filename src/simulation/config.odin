@@ -15,14 +15,14 @@ T_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
 // constant
 Config_Path :: "./config/world_config.json"
 Chunk_Size :: 16
-Chunk_Per_Row :: (World_Width + Chunk_Size - 1) / Chunk_Size
-Chunk_Per_Column :: (World_Height + Chunk_Size - 1) / Chunk_Size
-Max_Chunk_Idx :: Chunk_Per_Row * Chunk_Per_Column - 1
+Width_In_Chunk :: (World_Width + Chunk_Size - 1) / Chunk_Size
+Height_In_Chunk :: (World_Height + Chunk_Size - 1) / Chunk_Size
+Max_Chunk_Idx :: Width_In_Chunk * Height_In_Chunk - 1
 Chunk_Idle_Thresh :: 6
 Dt: f64 : 1.0 / 60.0
 Dt32: f32 : 1.0 / 60.0
-World_Width :: 1920 / 4
-World_Height :: 1080 / 4
+World_Width :: 1920 / Scale
+World_Height :: 1080 / Scale
 Gravity: f32 : 980
 Scale :: 4
 Brush_Size :: 4
