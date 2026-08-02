@@ -1,4 +1,5 @@
 #!/bin/bash
 
 python3.14 scripts/generate_material.py
-odin run ./src -debug -out:sandfall
+odin build ./src -debug -out:sandfall
+./sandfall
