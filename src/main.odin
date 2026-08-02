@@ -66,6 +66,11 @@ main :: proc() {
 
 		if instance.debug_ui.show {
 			game.ui_draw(&instance)
+			rl.DrawFPS(100, 20)
+		}
+
+		if instance.debug_ui.float_uis.show {
+			game.material_list_selector(config, &instance.debug_ui, instance.debug_ui.float_uis.bound)
 		}
 
 		render_brush(config, &instance.mouse)

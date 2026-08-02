@@ -1,5 +1,11 @@
 {
-  "Sand": {
+  "Empty": {
+    "type": "Hard"
+  },
+  "Cement": {
+    "type": "Semi_Hard"
+  },
+ "Sand": {
     "type": "Powder",
     "down_acc": 30,
     "slide_thresh": 1.5,
