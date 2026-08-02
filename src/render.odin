@@ -190,3 +190,10 @@ get_vel_color :: proc(side: int, vel: f32, max: f32) -> (color: rl.Color) {
 	}
 	return
 }
+
+render_particles :: proc(particles: [dynamic]sim.Particle) {
+	for &p in particles {
+		if p.life <= 0 do continue
+		rl.DrawRectangleV(p.pos, {sim.Scale, sim.Scale}, sim.get_material_base_color(p.material))
+	}
+}

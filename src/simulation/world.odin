@@ -14,8 +14,11 @@ World :: struct {
 	chunks:  []Chunk,
 	updated: []u32,
 	side:    []int, // will be packed inside mat id
+	particles: [dynamic]Particle,
 	config:  World_Config,
 }
+
+
 World_Config :: [Material]Material_Config
 
 create_world :: proc() -> World {
@@ -28,6 +31,7 @@ create_world :: proc() -> World {
 		make([]Chunk, Chunk_Per_Row * Chunk_Per_Column),
 		make([]u32, World_Width * World_Height),
 		make([]int, World_Width * World_Height),
+		make([dynamic]Particle, 128),
 		load_world_config(Config_Path),
 	}
 }
@@ -39,6 +43,7 @@ delete_world :: proc(world: ^World) {
 	delete(world.color)
 	delete(world.chunks)
 	delete(world.updated)
+	delete(world.particles)
 	delete(world.side)
 }
 
@@ -71,8 +76,8 @@ circle_brush_spawn :: proc(world: ^World, ox, oy, r: int, material: Material) {
 }
 
 
-total_spawn: u64 = 0
 spawn_material :: proc(world: ^World, material: Material, x, y: int) {
+	@static total_spawn: u64 = 0
 	i := idx(x, y)
 	if world.grid[i] == material do return
 	world.updated[i] = world.tick
@@ -223,7 +228,7 @@ prepare_cell_update :: proc(world: ^World, x, y: int) -> (ctx: Update_Context, o
 apply_gravity :: proc(world: ^World, mat_config: Material_Config, mat_type_config: Material_Type_Config, now: int) {
 	vx := world.vel_x
 	vy := world.vel_y
-	vy[now] = rl.Clamp(vy[now] + mat_config.down_acc * f32(Dt), 0, mat_type_config.Max_Vy)
+	vy[now] = rl.Clamp(vy[now] + mat_config.down_acc * Dt32, 0, mat_type_config.Max_Vy)
 	vx[now] = rl.Clamp(vx[now], 0, mat_type_config.Max_Vx)
 }
 

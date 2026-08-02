@@ -20,9 +20,10 @@ Chunk_Per_Column :: (World_Height + Chunk_Size - 1) / Chunk_Size
 Max_Chunk_Idx :: Chunk_Per_Row * Chunk_Per_Column - 1
 Chunk_Idle_Thresh :: 6
 Dt: f64 : 1.0 / 60.0
+Dt32: f32 : 1.0 / 60.0
 World_Width :: 1920 / 4
 World_Height :: 1080 / 4
-Gravity: f32 : 30
+Gravity: f32 : 980
 Scale :: 4
 Brush_Size :: 4
 Start_Time_Scale :: 5

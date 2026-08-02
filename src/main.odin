@@ -51,6 +51,7 @@ main :: proc() {
 		for acc >= sim.Dt {
 			game.event_listener(world, events)
 			sim.update(world)
+			sim.update_particles(&world.particles)
 			acc -= sim.Dt
 			world.tick += 1
 		}
@@ -60,13 +61,14 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
+		render_particles(world.particles)
 
 		if config.show_chunk_border {
 			render_debug_chunk(world)
 		}
 
 		if instance.debug_ui.show {
-			game.ui_draw(&instance)
+			game.draw_ui(&instance)
 			rl.DrawFPS(100, 20)
 		}
 
