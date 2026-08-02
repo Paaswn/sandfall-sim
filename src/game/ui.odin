@@ -4,8 +4,7 @@ import "core:reflect"
 import "core:strings"
 import rl "vendor:raylib"
 
-
-Ui :: struct {
+Ui_Manager :: struct {
 	show: bool,
 	float_uis: Float_Ui,
 	bound: rl.Rectangle,
@@ -31,14 +30,14 @@ Listview_Control :: struct {
 	active: i32,
 }
 
-create_ui :: proc() -> Ui {
+create_ui :: proc() -> Ui_Manager {
 	material_choices, ok := strings.join(reflect.enum_field_names(Material), ";")
 	cmaterial_choices := strings.clone_to_cstring(material_choices)
 	delete(material_choices)
 	if ok != .None {
 		panic("fahh")
 	}
-	return Ui {
+	return Ui_Manager {
 		false,
 		{{0, 0, 200, 100 }, false },
 		{10, 10, 250, 600},
@@ -51,11 +50,11 @@ create_ui :: proc() -> Ui {
 	}
 }
 
-delete_ui :: proc(ui: ^Ui) {
+delete_ui :: proc(ui: ^Ui_Manager) {
 	delete(ui.mat_select.choices)
 }
 
-ui_draw :: proc(instance: ^Game) {
+draw_ui :: proc(instance: ^Game) {
 	conf := &instance.config;
 	dbg_ui := &instance.debug_ui
 	edit_modes := &dbg_ui.edit_modes
@@ -74,10 +73,23 @@ ui_draw :: proc(instance: ^Game) {
 
 	rl.GuiCheckBox({20, 190, 50, 25}, "Show Chunk Border", &conf.show_chunk_border)
 
+	ui_draw_next(dbg_ui, proc() {
+	})
 }
 
+ui_draw_first :: proc(manager: ^Ui_Manager) {
+	
+}
 
-material_list_selector :: #force_inline proc(conf: ^Game_Config, dbg_ui: ^Ui, rect: rl.Rectangle) {
+ui_draw_next :: proc(manager: ^Ui_Manager, ui_elem: proc()) {
+	ui_elem()
+}
+
+ui_draw_last :: proc(manager: ^Ui_Manager) {
+	rl.DrawRectangleRoundedLines(manager.bound, 0.1, 20, rl.WHITE)
+	manager.bound = {20,20, 100, 100}
+}
+material_list_selector :: #force_inline proc(conf: ^Game_Config, dbg_ui: ^Ui_Manager, rect: rl.Rectangle) {
 	mat_as_int := i32( conf.current_mat )
 	selected := rl.GuiListView(rect,  dbg_ui.mat_select.choices, &dbg_ui.mat_select.scroll_index, &mat_as_int)
 	if mat_as_int < 0 do mat_as_int = 0

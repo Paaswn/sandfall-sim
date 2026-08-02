@@ -10,7 +10,7 @@ Game :: struct {
 	events:    Event_Queues,
 	pixel_buf: []rl.Color,
 	mouse:     Mouse,
-	debug_ui:  Ui,
+	debug_ui:  Ui_Manager,
 }
 
 // maybe add mouse click here

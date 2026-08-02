@@ -8,8 +8,10 @@ Ai usage can be found [here](#ai-usage)
 >* ~~powder-like element~~
 ### Progression
 >* improve liquid implementation
-### Goal
->* add proper UI
+### Current Goal ( Most >> Least Important )
+>1. add debug UI 
+>2. implement particle system
+>3. add proper UI
 
 
 ## AI Usage
