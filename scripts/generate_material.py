@@ -1,6 +1,6 @@
 import json
 
-OUTPUT = "/home/paaswn/Projects/Odin/projectF/src/simulation/material.odin"
+OUTPUT = "/home/paaswn/Projects/Odin/projectF/src/simulation/generated_material.odin"
 CONFIG = "/home/paaswn/Projects/Odin/projectF/config/world_config.json"
 
 with open(CONFIG, "r", encoding="utf-8") as f:
