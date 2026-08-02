@@ -29,10 +29,6 @@ Action :: enum {
 	Debug_Velocity_X,
 	Debug_Chunk,
 	Select_Empty,
-	Select_Sand,
-	Select_Cement,
-	Select_Dirt,
-	Select_Water,
 	Increase_Tick,
 	Decrease_Tick,
 	Increase_Brush_Size,
@@ -48,10 +44,6 @@ Key_Binds :: [Action]Input {
 	.Debug_Velocity_X    = {.None, .THREE, {.Ctrl}},
 	.Debug_Chunk         = {.None, .FOUR, {.Ctrl}},
 	.Select_Empty        = {.None, .ONE, {.None}},
-	.Select_Sand         = {.None, .TWO, {.None}},
-	.Select_Cement       = {.None, .THREE, {.None}},
-	.Select_Water        = {.None, .FOUR, {.None}},
-	.Select_Dirt         = {.None, .FIVE, {.None}},
 	.Increase_Tick       = {.Up, .KEY_NULL, {.Shift}},
 	.Decrease_Tick       = {.Down, .KEY_NULL, {.Shift}},
 	.Increase_Brush_Size = {.Up, .KEY_NULL, {.Ctrl}},
@@ -102,16 +94,8 @@ keyboard_handler :: proc(game: ^Game) {
 			config.debug_render = Debug.Velocity_X
 		case .Debug_Chunk:
 			config.show_chunk_border = !config.show_chunk_border
-		case .Select_Sand:
-			config.current_mat = .Sand
 		case .Select_Empty:
 			config.current_mat = .Empty
-		case .Select_Cement:
-			config.current_mat = .Cement
-		case .Select_Dirt:
-			config.current_mat = .Dirt
-		case .Select_Water:
-			config.current_mat = .Water
 		case .Increase_Tick:
 			config.time_scale += 1
 			if config.time_scale >= i32( len(sim.T_Scales) ) - 1 do config.time_scale = i32( len(sim.T_Scales) ) - 1

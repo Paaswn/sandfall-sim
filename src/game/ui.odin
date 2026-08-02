@@ -7,14 +7,22 @@ import rl "vendor:raylib"
 
 Ui :: struct {
 	show: bool,
+	float_uis: Float_Ui,
 	bound: rl.Rectangle,
 	mat_select: Listview_Control,
-	dropdowns: Dropdown_Control,
+	edit_modes: [Edit_Modes]bool,
 }
 
-Dropdown_Control :: struct {
-	debug_edit_mode: bool,
-	time_edit_mode: bool
+Edit_Modes :: enum {
+	Time_Edit,
+	Friction_Text,
+	Debug_Render
+}
+
+
+Float_Ui :: struct {
+	bound: rl.Rectangle,
+	show: bool
 }
 
 Listview_Control :: struct {
@@ -32,9 +40,14 @@ create_ui :: proc() -> Ui {
 	}
 	return Ui {
 		false,
-		{10, 10, 250, 300},
+		{{0, 0, 200, 100 }, false },
+		{10, 10, 250, 600},
 		{cmaterial_choices ,0,-1 },
-		{false, false},
+		[Edit_Modes]bool {
+			.Time_Edit = false,
+			.Friction_Text = false,
+			.Debug_Render = false
+		}
 	}
 }
 
@@ -45,22 +58,28 @@ delete_ui :: proc(ui: ^Ui) {
 ui_draw :: proc(instance: ^Game) {
 	conf := &instance.config;
 	dbg_ui := &instance.debug_ui
-
+	edit_modes := &dbg_ui.edit_modes
 	rl.DrawRectangleRoundedLines(dbg_ui.bound, 0.1, 20, rl.WHITE)
-	mat_as_int := i32( conf.current_mat )
-	selected := rl.GuiListView({20, 50, 200, 100},  dbg_ui.mat_select.choices, &dbg_ui.mat_select.scroll_index, &mat_as_int)
-	if mat_as_int < 0 do mat_as_int = 0
-	conf.current_mat = sim.Material(mat_as_int)
-
-	debug_mode_as_int := i32(conf.debug_render)
-	if rl.GuiDropdownBox({20, 20, 50, 25}, "Off;Vy;Vx", &debug_mode_as_int, dbg_ui.dropdowns.debug_edit_mode) {
-		dbg_ui.dropdowns.debug_edit_mode = !dbg_ui.dropdowns.debug_edit_mode
-		conf.debug_render = sim.Debug(debug_mode_as_int)
+	material_list_selector(conf, dbg_ui, { 20, 50, 200, 100 })
+	when ODIN_DEBUG {
+		debug_mode_as_int := i32(conf.debug_render)
+		if rl.GuiDropdownBox({20, 20, 50, 25}, "Off;Vy;Vx", &debug_mode_as_int, edit_modes[.Debug_Render]) {
+			edit_modes[.Debug_Render] = !edit_modes[.Debug_Render]
+			conf.debug_render = sim.Debug(debug_mode_as_int)
+		}
 	}
-
-	if rl.GuiDropdownBox({20, 160, 50, 25}, "0.01;0.05;0.1;0.5;0.75;1", &conf.time_scale, dbg_ui.dropdowns.time_edit_mode) {
-		dbg_ui.dropdowns.time_edit_mode = !dbg_ui.dropdowns.time_edit_mode
+	if rl.GuiDropdownBox({20, 160, 50, 25}, "0.01;0.05;0.1;0.5;0.75;1", &conf.time_scale, edit_modes[.Time_Edit]) {
+		edit_modes[.Time_Edit] = !edit_modes[.Time_Edit]
 	}
 
 	rl.GuiCheckBox({20, 190, 50, 25}, "Show Chunk Border", &conf.show_chunk_border)
+
+}
+
+
+material_list_selector :: #force_inline proc(conf: ^Game_Config, dbg_ui: ^Ui, rect: rl.Rectangle) {
+	mat_as_int := i32( conf.current_mat )
+	selected := rl.GuiListView(rect,  dbg_ui.mat_select.choices, &dbg_ui.mat_select.scroll_index, &mat_as_int)
+	if mat_as_int < 0 do mat_as_int = 0
+	conf.current_mat = sim.Material(mat_as_int)
 }

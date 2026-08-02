@@ -39,10 +39,11 @@ main :: proc() {
 		acc += dt * TS[config.time_scale]
 		prev = now
 		game.update_mouse_state(&instance.mouse)
-		if !rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.bound) || !instance.debug_ui.show {
-			game.mouse_handler(&events.spawn, &instance.mouse, config)
-		} else {
+		overlap := ( rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.bound) && instance.debug_ui.show ) || ( rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.float_uis.bound) && instance.debug_ui.float_uis.show )
+		if overlap {
 			instance.mouse.has_prev = false
+		} else {
+			game.mouse_handler(&instance)
 		}
 
 		game.keyboard_handler(&instance)
@@ -74,7 +75,6 @@ main :: proc() {
 		}
 
 		render_brush(config, &instance.mouse)
-		rl.DrawFPS(10, 10)
 		rl.EndDrawing()
 	}
 }

@@ -94,11 +94,10 @@ intersect :: proc(x0, y0, w0, h0, x1, y1, w1, h1: int) -> bool {
 	return true
 }
 
-mouse_handler :: proc(
-	spawn: ^[dynamic]Spawn_Event,
-	mouse: ^Mouse,
-	config: ^Game_Config,
-) {
+mouse_handler :: proc( instance: ^Game ) {
+	spawn := &instance.events.spawn
+	mouse := &instance.mouse
+	config:= &instance.config
 	if rl.IsMouseButtonDown(.LEFT) {
 		if len(spawn) < 512 {
 			msx, msy := mouse.world[0], mouse.world[1]
@@ -118,6 +117,13 @@ mouse_handler :: proc(
 			mouse.prev_world = {msx, msy}
 		}
 	} else do mouse.has_prev = false
+
+	if rl.IsMouseButtonPressed(.RIGHT) {
+		float_ui := &instance.debug_ui.float_uis
+		float_ui.show =  !float_ui.show
+		float_ui.bound.x  = mouse.pos.x
+		float_ui.bound.y  = mouse.pos.y
+	}
 }
 
 brush_line :: proc(world: ^World, se: Spawn_Event) {
