@@ -138,13 +138,4 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	return false
 }
 
-blend :: proc(dst, src: rl.Color, alpha: f32) -> rl.Color {
-	inv := 1.0 - alpha
 
-	return rl.Color {
-		u8(f32(dst.r) * inv + f32(src.r) * alpha),
-		u8(f32(dst.g) * inv + f32(src.g) * alpha),
-		u8(f32(dst.b) * inv + f32(src.b) * alpha),
-		255,
-	}
-}
