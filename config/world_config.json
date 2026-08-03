@@ -1,9 +1,13 @@
 {
   "Empty": {
-    "type": "Hard"
+    "type": "Hard",
+    "color": "Black",
+    "variance": 0
   },
   "Cement": {
-    "type": "Semi_Hard"
+    "type": "Semi_Hard" ,
+    "color": "DARKGRAY",
+    "variance": 20
   },
  "Sand": {
     "type": "Powder",
@@ -15,7 +19,9 @@
     "impact_to_side": 0.6,
     "impact_thresh": 2.5,
     "slide_drag": 0.28,
-    "fall_drag": 0.12
+    "fall_drag": 0.12,
+    "color": "DARKGRAY",
+    "variance": 20
   },
   "Dirt": {
     "type": "Powder",
@@ -27,7 +33,9 @@
     "impact_to_side": 0.9,
     "impact_thresh": 2.5,
     "slide_drag": 0.3,
-    "fall_drag": 0.2
+    "fall_drag": 0.2,
+    "color": "DARKGRAY",
+    "variance": 20
   },
   "Water": {
     "type": "Liquid",
@@ -39,6 +47,8 @@
     "impact_to_side": 0.9,
     "impact_thresh": 2.5,
     "slide_drag": 0.1,
-    "fall_drag": 0.1
+    "fall_drag": 0.1,
+    "color": "DARKGRAY",
+    "variance": 20
   }
 }
