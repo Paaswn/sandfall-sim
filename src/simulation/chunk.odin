@@ -5,9 +5,9 @@ import "core:math"
 
 Chunk_Manager :: struct {
 	// index of active odd chunk
-	active_odd_chunk: [dynamic]int,
+	active_white_chunk: [dynamic]int,
 	// index of active even chunk
-	active_even_chunk: [dynamic]int,
+	active_red_chunk: [dynamic]int,
 	chunks: []Chunk
 }
 
@@ -52,14 +52,14 @@ init_chunk_manager :: proc(manager: ^Chunk_Manager) {
 			}
 		}
 	}
-	manager.active_even_chunk = make([dynamic]int)
-	manager.active_odd_chunk = make([dynamic]int)
+	manager.active_red_chunk = make([dynamic]int)
+	manager.active_white_chunk = make([dynamic]int)
 	manager.chunks = chunks
 }
 
 delete_chunk_manager :: proc(manager: ^Chunk_Manager) {
-	delete(manager.active_even_chunk)
-	delete(manager.active_odd_chunk)
+	delete(manager.active_red_chunk)
+	delete(manager.active_white_chunk)
 	delete(manager.chunks)
 }
 
@@ -105,9 +105,9 @@ put_chunk_in_queue :: proc(world: ^World, cx, cy: int) {
 	cidx := chunk_index_from_chunk_pos(cx, cy)
 	if !is_chunk_active(&manager.chunks[cidx], world.tick) {
 		if manager.chunks[cidx].white {
-			append(&manager.active_odd_chunk, cidx)
+			append(&manager.active_white_chunk, cidx)
 		} else {
-			append(&manager.active_even_chunk, cidx)
+			append(&manager.active_red_chunk, cidx)
 		}
 		manager.chunks[cidx].last_updated_tick = world.tick
 		// fmt.println("odd:", manager.active_odd_chunk[:])

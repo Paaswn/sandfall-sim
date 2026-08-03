@@ -123,16 +123,32 @@ move_cell :: proc(world: ^World, to, from: int) {
 update_grid :: proc(world: ^World) {
 	c_man := &world.chunk_manager
 	// fmt.println(c_man.active_even_chunk[:], c_man.active_odd_chunk[:] )
-	#reverse for cidx, i in c_man.active_even_chunk {
-		loop_through_chunk(world, cidx)
-		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
-			unordered_remove_dynamic_array(&c_man.active_even_chunk, i)
+	
+	if world.tick % 2 == 0 {
+		#reverse for cidx, i in c_man.active_red_chunk {
+			loop_through_chunk(world, cidx)
+			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+				unordered_remove_dynamic_array(&c_man.active_red_chunk, i)
+			}
 		}
-	}
-	#reverse for cidx, i in c_man.active_odd_chunk {
-		loop_through_chunk(world, cidx)
-		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
-			unordered_remove_dynamic_array(&c_man.active_odd_chunk, i)
+		#reverse for cidx, i in c_man.active_white_chunk {
+			loop_through_chunk(world, cidx)
+			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+				unordered_remove_dynamic_array(&c_man.active_white_chunk, i)
+			}
+		}
+	} else {
+		#reverse for cidx, i in c_man.active_white_chunk {
+			loop_through_chunk(world, cidx)
+			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+				unordered_remove_dynamic_array(&c_man.active_white_chunk, i)
+			}
+		}
+		#reverse for cidx, i in c_man.active_red_chunk {
+			loop_through_chunk(world, cidx)
+			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+				unordered_remove_dynamic_array(&c_man.active_red_chunk, i)
+			}
 		}
 	}
 }
@@ -142,10 +158,17 @@ loop_through_chunk ::  proc(world: ^World, cidx: int) {
 	cx, cy := chunk_idx_to_chunk_pos(cidx)
 	// fmt.println(cidx, ":", cx,cy )
 	for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1  {
-		for local_x in 0..<Chunk_Size {
+		start_lx, end_lx, step_lx := 0, Chunk_Size, 1
+		if world.tick % 2 != 0 {
+			// local X v
+			start_lx = Chunk_Size - 1
+			end_lx = -1
+			step_lx = -1
+		}
+		for local_x := start_lx; local_x != end_lx; local_x += step_lx {
 			x, y := to_world_pos(cx, cy, local_x, local_y)
 			if y >= World_Height{
-				return
+				continue
 			}
 			if x >= World_Width {
 				continue
@@ -172,7 +195,7 @@ loop_through_chunk ::  proc(world: ^World, cidx: int) {
 		}
 	}
 	if updated {
-		chunk :=  world.chunk_manager.chunks[cidx]
+		chunk :=  &world.chunk_manager.chunks[cidx]
 		chunk.last_updated_tick = world.tick
 	}
 }
