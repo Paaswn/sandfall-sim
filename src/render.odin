@@ -45,16 +45,14 @@ build_pixel_index :: proc(
 		}
 	} else {
 		// only render alive chunks
-		for cy in 0 ..< sim.Width_In_Chunk {
-			for cx in 0 ..< sim.Width_In_Chunk {
-				if !sim.is_chunk_active(
-					sim.chunk_from_chunk_pos(world.chunk_manager.chunks, cx, cy),
-					world.tick,
-				) {
-					continue
-				}
+		manager := &world.chunk_manager
+		for cidx in manager.active_red_chunk {
+			if !sim.is_chunk_active(&manager.chunks[ cidx ], world.tick) {
+				continue
+			} else {
 				for local_y in 0 ..< sim.Chunk_Size {
 					for local_x in 0 ..< sim.Chunk_Size {
+						cx , cy := sim.chunk_idx_to_chunk_pos(cidx)
 						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
 						if idx, ok := sim.world_index(x, y); ok {
 							buf[idx] = world.color[idx]
@@ -63,7 +61,21 @@ build_pixel_index :: proc(
 				}
 			}
 		}
-
+		for cidx in manager.active_white_chunk {
+			if !sim.is_chunk_active(&manager.chunks[ cidx ], world.tick) {
+				continue
+			} else {
+				for local_y in 0 ..< sim.Chunk_Size {
+					for local_x in 0 ..< sim.Chunk_Size {
+						cx , cy := sim.chunk_idx_to_chunk_pos(cidx)
+						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
+						if idx, ok := sim.world_index(x, y); ok {
+							buf[idx] = world.color[idx]
+						}
+					}
+				}
+			}
+		}
 	}
 }
 build_pixel_pos :: proc(
