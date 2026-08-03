@@ -123,7 +123,7 @@ move_cell :: proc(world: ^World, to, from: int) {
 update_grid :: proc(world: ^World) {
 	c_man := &world.chunk_manager
 	// fmt.println(c_man.active_even_chunk[:], c_man.active_odd_chunk[:] )
-	
+
 	if world.tick % 2 == 0 {
 		#reverse for cidx, i in c_man.active_red_chunk {
 			loop_through_chunk(world, cidx)
@@ -198,89 +198,6 @@ loop_through_chunk ::  proc(world: ^World, cidx: int) {
 		chunk :=  &world.chunk_manager.chunks[cidx]
 		chunk.last_updated_tick = world.tick
 	}
-}
-
-update :: proc(world: ^World) {
-	for cy := Height_In_Chunk - 1; cy >= 0; cy -= 1 {
-			local_row: for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1 {
-				start_cx, end_cx, step_cx := 0, Width_In_Chunk, 1 // X chunk for-loop setup
-				start_lx, end_lx, step_lx := 0, Chunk_Size, 1 // local X for-loop loop setup
-				if world.tick % 2 != 0 {
-					// chunk X v
-					start_cx = Width_In_Chunk - 1
-					end_cx = -1
-					step_cx = -1
-					// local X v
-					start_lx = Chunk_Size - 1
-					end_lx = -1
-					step_lx = -1
-				}
-				for cx := start_cx; cx != end_cx; cx += step_cx {
-					chunk := chunk_from_chunk_pos(world.chunk_manager.chunks, cx, cy)
-					if !is_chunk_active(chunk, world.tick) {
-						continue
-					}
-					 for local_x := start_lx; local_x != end_lx; local_x += step_lx {
-						x, y := to_world_pos(cx, cy, local_x, local_y)
-						if y >= World_Height { 	// outside in this scope mean local y is too high
-							continue local_row
-						}
-						if x >= World_Width {
-							continue
-						}
-						i := idx(x, y)
-						before := world.grid[i]
-						if update_cell_vertical(world, x, y) {
-							after := world.grid[i]
-							chunk.last_updated_tick = world.tick
-							chunk.to_update_tick = world.tick + 1
-							if local_y == 0 && before != after {
-								wake_chunk_now(world, cx, cy - 1)
-							}
-							if local_x == 0 && before != after {
-								wake_chunk_now(world, cx - 1, cy)
-							}
-							if local_x == Chunk_Size - 1 && before != after {
-								wake_chunk_now(world, cx + 1, cy)
-							}
-						}
-
-					}
-				}
-				for cx := start_cx; cx != end_cx; cx += step_cx {
-					chunk := chunk_from_chunk_pos(world.chunk_manager.chunks, cx, cy)
-					if !is_chunk_active(chunk, world.tick) {
-						continue
-					}
-					 for local_x := start_lx; local_x != end_lx; local_x += step_lx {
-						x, y := to_world_pos(cx, cy, local_x, local_y)
-						if y >= World_Height { 	// outside in this scope mean local y is too high
-							continue local_row
-						}
-						if x >= World_Width {
-							continue
-						}
-						i := idx(x, y)
-						before := world.grid[i]
-						if update_cell_side(world,x ,y) {
-							after := world.grid[i]
-							chunk.last_updated_tick = world.tick
-							chunk.to_update_tick = world.tick + 1
-							if local_y == 0 && before != after {
-								wake_chunk_now(world, cx, cy - 1)
-							}
-							if local_x == 0 && before != after {
-								wake_chunk_now(world, cx - 1, cy)
-							}
-							if local_x == Chunk_Size - 1 && before != after {
-								wake_chunk_now(world, cx + 1, cy)
-							}
-						}
-
-					}
-				}
-			}
-		}
 }
 
 Update_Context :: struct {
