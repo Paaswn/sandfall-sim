@@ -73,7 +73,7 @@ chunk_index_from_world_pos :: proc(x, y: int) -> int {
 }
 
 chunk_idx_to_chunk_pos :: proc(cidx: int) -> ( int, int ) {
-	return cidx % Width_In_Chunk , cidx / Height_In_Chunk
+	return cidx % Width_In_Chunk , cidx / Width_In_Chunk
 }
 
 chunk_from_world_pos :: proc(chunks: []Chunk, x, y: int) -> ^Chunk {

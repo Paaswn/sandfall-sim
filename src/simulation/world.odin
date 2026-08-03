@@ -137,11 +137,12 @@ update_grid :: proc(world: ^World) {
 	}
 }
 
-loop_through_chunk :: #force_inline proc(world: ^World, cidx: int) {
+loop_through_chunk ::  proc(world: ^World, cidx: int) {
 	updated := false
+	cx, cy := chunk_idx_to_chunk_pos(cidx)
+	// fmt.println(cidx, ":", cx,cy )
 	for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1  {
 		for local_x in 0..<Chunk_Size {
-			cx, cy := chunk_idx_to_chunk_pos(cidx)
 			x, y := to_world_pos(cx, cy, local_x, local_y)
 			if y >= World_Height{
 				return
@@ -153,17 +154,20 @@ loop_through_chunk :: #force_inline proc(world: ^World, cidx: int) {
 			i := idx(x, y)
 			before := world.grid[i]
 			if update_cell_vertical(world, x, y) || update_cell_side(world, x, y) {
+				updated = true
 				after := world.grid[i]
-				if local_y == 0 && before != after {
+				if before == after {
+					continue
+				}
+				if local_y == 0 {
 					put_chunk_in_queue(world, cx, cy - 1)
 				}
-				if local_x == 0 && before != after {
+				if local_x == 0 {
 					put_chunk_in_queue(world, cx-1, cy)
 				}
-				if local_x == Chunk_Size - 1 && before != after {
+				if local_x == Chunk_Size - 1 {
 					put_chunk_in_queue(world, cx + 1, cy)
 				}
-				updated = true
 			}
 		}
 	}

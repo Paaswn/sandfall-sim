@@ -1,5 +1,4 @@
 #!/bin/bash
 
 python3.14 scripts/generate_material.py
-odin build ./src -debug -out:sandfall
-./sandfall
+odin build ./src -debug -o:minimal -out:sandfall && ./sandfall
