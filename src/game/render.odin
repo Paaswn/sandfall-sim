@@ -1,14 +1,12 @@
-package main
+package game
 
 import "core:fmt"
 import "core:math"
-import "game"
-import sim "simulation"
+import sim "../simulation"
 import rl "vendor:raylib"
 
-Game :: game.Game
-Game_Config :: game.Game_Config
-Mouse_State :: game.Mouse
+Mouse_State :: Mouse
+
 build_pixel_buf :: proc(game: ^Game) {
 	debug_mode := game.config.debug_render
 	world := &game.world
@@ -47,7 +45,7 @@ build_pixel_index :: proc(
 		// only render alive chunks
 		manager := &world.chunk_manager
 		for cidx in manager.active_red_chunk {
-			if !sim.is_chunk_active(&manager.chunks[ cidx ], world.tick) {
+			if !sim.chunk_active(&manager.chunks[ cidx ], world.tick) {
 				continue
 			} else {
 				for local_y in 0 ..< sim.Chunk_Size {
@@ -62,7 +60,7 @@ build_pixel_index :: proc(
 			}
 		}
 		for cidx in manager.active_white_chunk {
-			if !sim.is_chunk_active(&manager.chunks[ cidx ], world.tick) {
+			if !sim.chunk_active(&manager.chunks[ cidx ], world.tick) {
 				continue
 			} else {
 				for local_y in 0 ..< sim.Chunk_Size {
@@ -92,7 +90,7 @@ build_pixel_pos :: proc(
 
 render_debug_chunk :: proc(world: ^sim.World) {
 	for &chunk, i in world.chunk_manager.chunks {
-		if sim.is_chunk_active(&chunk, world.tick) {
+		if sim.chunk_active(&chunk, world.tick) {
 			x := i % sim.Width_In_Chunk
 			y := i / sim.Width_In_Chunk
 			S := sim.Scale
@@ -107,53 +105,23 @@ render_debug_chunk :: proc(world: ^sim.World) {
 		}
 	}
 }
-// draw_rectangle :: proc(brush_size: int, mouse.world.x, mouse.world.y: int) {
-// 	y_start := mouse.world.y - brush_size
-// 	y_end := mouse.world.y + brush_size
-// 	x_start := mouse.world.x - brush_size
-// 	x_end := mouse.world.x + brush_size
-// 	for y in y_start ..= y_end {
-// 		for x in x_start ..= x_end {
-// 			if sim.is_outside(x, y) {
-// 				continue
-// 			}
-// 			if y == y_start || y == y_end || x == x_start || x == x_end {
-// 				rl.DrawRectangle(
-// 					i32(x * sim.Scale),
-// 					i32(y * sim.Scale),
-// 					i32(sim.Scale),
-// 					i32(sim.Scale),
-// 					rl.WHITE,
-// 				)
-// 			}
-// 		}
-// 	}
-// }
-
-// draw_pixelated_circle :: proc(mouse.world.x, mouse.world.y: int) {
-//     for y in mouse.world.y - config.brush_size ..= mouse.world.y + config.brush_size {
-//         for x in mouse.world.x - config.brush_size ..= mouse.world.x + config.brush_size {
-// 			if sim.is_outside(x, y) {
-// 				continue
-// 			}
-// 			dx := x - mouse.world.x
-// 			dy := y - mouse.world.y
-// 			dist2 := dx * dx + dy * dy
-// 			outer := config.brush_size * config.brush_size
-// 			inner := (config.brush_size - 1) * (config.brush_size - 1)
-// 			if dist2 < outer && dist2 >= inner {
-// 				rl.DrawRectangle(
-// 					i32(x * sim.Scale),
-// 					i32(y * sim.Scale),
-// 					i32(sim.Scale),
-// 					i32(sim.Scale),
-// 					rl.WHITE,
-// 				)
-// 			}
-// 		}
-// 	}
-// }
-
+render_tool :: proc(config: ^Game_Config, mouse: ^Mouse_State) {
+	switch config.tool_man.curr_tool {
+	case .Pipette:
+		render_pipette(config, mouse)
+	case .Brush:
+		render_brush(config, mouse)
+	}
+}
+render_pipette :: proc(config: ^Game_Config, mouse: ^Mouse_State) {
+	rl.DrawRectangle(
+		i32(mouse.world.x * sim.Scale),
+		i32(mouse.world.y * sim.Scale),
+		i32(sim.Scale),
+		i32(sim.Scale),
+		rl.WHITE,
+	)
+}
 render_brush :: proc(config: ^Game_Config, mouse: ^Mouse_State) {
 
 	rl.DrawRectangle(

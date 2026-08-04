@@ -56,15 +56,15 @@ main :: proc() {
 			world.tick += 1
 		}
 
-		build_pixel_buf(&instance)
+		game.build_pixel_buf(&instance)
 		rl.UpdateTexture(texture, raw_data(pixel_buf))
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
-		render_particles(world.particles)
+		game.render_particles(world.particles)
 
 		if config.show_chunk_border {
-			render_debug_chunk(world)
+			game.render_debug_chunk(world)
 		}
 
 		if instance.debug_ui.show {
@@ -76,7 +76,7 @@ main :: proc() {
 			game.material_list_selector(config, &instance.debug_ui, instance.debug_ui.float_uis.bound)
 		}
 
-		render_brush(config, &instance.mouse)
+		game.render_tool(config, &instance.mouse)
 		rl.EndDrawing()
 	}
 }
