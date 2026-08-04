@@ -35,7 +35,9 @@ Action :: enum {
 	Decrease_Brush_Size,
 	Make_Spawn_Point,
 	Hot_Reload,
-	Open_Debug_Menu
+	Open_Debug_Menu,
+	Toggle_Brush_Tool,
+	Toggle_Pipette_Tool
 }
 
 Key_Binds :: [Action]Input {
@@ -50,8 +52,11 @@ Key_Binds :: [Action]Input {
 	.Decrease_Brush_Size = {.Down, .KEY_NULL, {.Ctrl}},
 	.Make_Spawn_Point    = {.None, .F, {.None}},
 	.Hot_Reload          = {.None, .R, {.Ctrl}},
-	.Open_Debug_Menu = {.None, .F1, {.None}}
+	.Open_Debug_Menu = {.None, .F1, {.None}},
+	.Toggle_Brush_Tool = {.None, .B, {.None}},
+	.Toggle_Pipette_Tool = {.None, .Q, {.None}}
 }
+
 keyboard_handler :: proc(game: ^Game) {
 	events := &game.events
 	config := &game.config
@@ -84,6 +89,10 @@ keyboard_handler :: proc(game: ^Game) {
 			continue
 		}
 		switch action {
+		case .Toggle_Brush_Tool:
+			switch_tool(config, .Brush)
+		case .Toggle_Pipette_Tool:
+			switch_tool(config, config.tool_man.prev_tool)
 		case .Open_Debug_Menu:
 			game.debug_ui.show = !game.debug_ui.show
 		case .Debug_Off:
@@ -113,4 +122,11 @@ keyboard_handler :: proc(game: ^Game) {
 			if !events.hot_reload do events.hot_reload = true
 		}
 	}
+}
+
+switch_tool :: proc(gc: ^Game_Config, tool: Tool) {
+	tm := &gc.tool_man
+	tm.prev_tool = tm.curr_tool
+	tm.curr_tool = tool
+	tm.just_switched = 30 
 }

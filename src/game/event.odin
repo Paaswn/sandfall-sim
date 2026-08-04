@@ -98,31 +98,45 @@ mouse_handler :: proc( instance: ^Game ) {
 	spawn := &instance.events.spawn
 	mouse := &instance.mouse
 	config:= &instance.config
-	if rl.IsMouseButtonDown(.LEFT) {
-		if len(spawn) < 512 {
-			msx, msy := mouse.world[0], mouse.world[1]
-			omsx, omsy := mouse.prev_world[0], mouse.prev_world[1]
-			if mouse.has_prev {
-				append(
-					spawn,
-					Spawn_Event{omsx, omsy, msx, msy, config.brush_size, config.current_mat},
-				)
-			} else {
-				append(
-					spawn,
-					Spawn_Event{msx, msy, msx, msy, config.brush_size, config.current_mat},
-				)
-				mouse.has_prev = true
-			}
-			mouse.prev_world = {msx, msy}
-		}
-	} else do mouse.has_prev = false
 
-	if rl.IsMouseButtonPressed(.RIGHT) {
-		float_ui := &instance.debug_ui.float_uis
-		float_ui.show =  !float_ui.show
-		float_ui.bound.x  = mouse.pos.x
-		float_ui.bound.y  = mouse.pos.y
+	switch config.tool_man.curr_tool {
+		case .Pipette:
+			if rl.IsMouseButtonPressed(.LEFT) {
+				x, y := instance.mouse.world.x, instance.mouse.world.y
+				config.current_mat = instance.world.grid[sim.idx(x, y)]
+				switch_tool(config, config.tool_man.prev_tool)
+			}
+		case .Brush:
+			if config.tool_man.just_switched > 0 {
+				config.tool_man.just_switched -= 1
+				return
+			}
+			if rl.IsMouseButtonDown(.LEFT) {
+				if len(spawn) < 512 {
+					msx, msy := mouse.world[0], mouse.world[1]
+					omsx, omsy := mouse.prev_world[0], mouse.prev_world[1]
+					if mouse.has_prev {
+						append(
+							spawn,
+							Spawn_Event{omsx, omsy, msx, msy, config.brush_size, config.current_mat},
+						)
+					} else {
+						append(
+							spawn,
+							Spawn_Event{msx, msy, msx, msy, config.brush_size, config.current_mat},
+						)
+						mouse.has_prev = true
+					}
+					mouse.prev_world = {msx, msy}
+				}
+			} else do mouse.has_prev = false
+		
+			if rl.IsMouseButtonPressed(.RIGHT) {
+				float_ui := &instance.debug_ui.float_uis
+				float_ui.show =  !float_ui.show
+				float_ui.bound.x  = mouse.pos.x
+				float_ui.bound.y  = mouse.pos.y
+			}
 	}
 }
 

@@ -22,6 +22,17 @@ Mouse :: struct {
 	has_prev:   bool,
 }
 
+Tool :: enum {
+	Pipette,
+	Brush
+}
+
+Tool_Manager :: struct {
+	just_switched: u8,
+	curr_tool: Tool,
+	prev_tool: Tool,
+}
+
 update_mouse_state :: proc(mouse: ^Mouse) {
 	mouse_pos := rl.GetMousePosition()
 	mouse.world = mouse_world(mouse_pos)
@@ -37,7 +48,7 @@ hot_reload :: proc(world: ^sim.World) {
 
 create_game :: proc(instance: ^Game) {
 		instance.world = sim.create_world()
-		instance.config = Game_Config{sim.Brush_Size, sim.Start_Time_Scale, sim.Debug.Off, false, sim.Start_Mat, sim.Scale}
+		instance.config = Game_Config{sim.Brush_Size, sim.Start_Time_Scale, sim.Debug.Off, false, sim.Start_Mat, sim.Scale, {0, .Brush, nil}}
 		instance.events = make_event_queues()
 		instance.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
 		instance.mouse = Mouse{{}, {}, {}, .None, false}
@@ -64,4 +75,5 @@ Game_Config :: struct {
 	show_chunk_border: bool,
 	current_mat:  Material,
 	window_scale: int,
+	tool_man: Tool_Manager
 }
