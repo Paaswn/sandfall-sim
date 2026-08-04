@@ -59,6 +59,7 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 }
 
 create_spawn_point :: proc(mouse: ^Mouse, events: ^Event_Queues, config: ^Game_Config) {
+	deleted := false
 	for _, se in events.spawn_points {
 		if intersect(
 			se.x0 - se.r,
@@ -66,15 +67,16 @@ create_spawn_point :: proc(mouse: ^Mouse, events: ^Event_Queues, config: ^Game_C
 			2 * se.r,
 			2 * se.r,
 			mouse.world.x - config.brush_size,
-			 mouse.world.y - config.brush_size,
+			mouse.world.y - config.brush_size,
 			config.brush_size * 2,
 			config.brush_size * 2,
 		) {
 			events.point_spawned -= 1
 			delete_key(&events.spawn_points, se.point)
-			return
+			deleted = true
 		}
 	}
+	if deleted do return
 	events.point_spawned += 1
 	map_insert(
 		&events.spawn_points,
