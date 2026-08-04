@@ -44,13 +44,13 @@ build_pixel_index :: proc(
 	} else {
 		// only render alive chunks
 		manager := &world.chunk_manager
-		for cidx in manager.active_red_chunk {
-			if !sim.chunk_active(&manager.chunks[ cidx ], world.tick) {
+		for &c, i in manager.chunks {
+			if !sim.chunk_active(&c, world.tick) {
 				continue
 			} else {
 				for local_y in 0 ..< sim.Chunk_Size {
 					for local_x in 0 ..< sim.Chunk_Size {
-						cx , cy := sim.chunk_idx_to_chunk_pos(cidx)
+						cx , cy := sim.chunk_idx_to_chunk_pos(i)
 						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
 						if idx, ok := sim.world_index(x, y); ok {
 							buf[idx] = world.color[idx]

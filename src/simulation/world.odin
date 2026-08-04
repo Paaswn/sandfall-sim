@@ -128,12 +128,14 @@ move_cell :: proc(world: ^World, to, from: int) {
 
 update_grid :: proc(world: ^World) {
 	c_man := &world.chunk_manager
-	// fmt.println(c_man.active_even_chunk[:], c_man.active_odd_chunk[:] )
 	#reverse for &c, i in c_man.chunks {
 		if chunk_active(&c, world.tick) {
 			loop_through_region(world, i)
 		}
 	}
+}
+
+update_chunks :: proc() {
 	// if world.tick % 2 == 0 {
 	// 	#reverse for cidx, i in c_man.active_red_chunk {
 	// 		loop_through_region(world, cidx)
@@ -162,7 +164,6 @@ update_grid :: proc(world: ^World) {
 	// 	}
 	// }
 }
-
 loop_through_region ::  proc(world: ^World, cidx: int) {
 	updated := false
 	cx, cy := chunk_idx_to_chunk_pos(cidx)
