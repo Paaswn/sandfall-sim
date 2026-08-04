@@ -14,7 +14,7 @@ Debug :: enum {
 T_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
 // constant
 Config_Path :: "./config/world_config.json"
-Chunk_Size :: 16
+Chunk_Size :: 32
 Width_In_Chunk :: (World_Width + Chunk_Size - 1) / Chunk_Size
 Height_In_Chunk :: (World_Height + Chunk_Size - 1) / Chunk_Size
 Max_Chunk_Idx :: Width_In_Chunk * Height_In_Chunk - 1

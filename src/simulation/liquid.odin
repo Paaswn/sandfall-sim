@@ -1,5 +1,6 @@
 package simulation
 
+import "core:math/rand"
 import "core:fmt"
 import "core:math"
 

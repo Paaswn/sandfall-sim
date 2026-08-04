@@ -1,7 +1,9 @@
 package simulation
 
 // --- THIS FILE WAS AUTOMATICALLY GENERATED ---
+
 import rl "vendor:raylib"
+
 Material_Config :: struct {
 	type:           Material_Type,
 	down_acc:       f32,
@@ -15,14 +17,13 @@ Material_Config :: struct {
 	fall_drag:      f32,
 }
 
-
 Material :: enum u8 {
 	Empty,
 	Cement,
 	Sand,
 	Dirt,
 	Water,
-	 
+	
 }
 
 get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> (color: rl.Color) {
@@ -33,7 +34,7 @@ get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> (color: rl.Co
 		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
 	case .Water:
 		color = rl.DARKBLUE
-	}
+    }
 	return
 }
 
@@ -52,3 +53,4 @@ get_material_base_color :: proc(mat: Material) -> (color: rl.Color ) {
 	}
 	return
 }
+

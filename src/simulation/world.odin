@@ -85,7 +85,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.updated[i] = world.tick
 	cx, cy := to_chunk_pos(x, y)
 	put_chunk_in_queue(world, cx, cy)
-	// wake_chunk_now(world, cx, cy)
+
 	if world.config[material].type == .Liquid {
 		world.side[i] = random_side()
 	}
@@ -95,9 +95,6 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.color[i] = get_material_color(material, x, y, total_spawn)
 	total_spawn += 1
 }
-// only move material, color, active state, and reset old position values
-//
-// **doesn't move velocity**
 swap_cell :: proc(world: ^World, to, from: int) {
 	// move cell
 	world.grid[to], world.grid[from] = world.grid[from], world.grid[to]
@@ -109,7 +106,16 @@ swap_cell :: proc(world: ^World, to, from: int) {
 	world.vel_y[from] = world.vel_y[to]
 
 }
-
+remove_material :: proc(world: ^World, idx: int) {
+	world.color[idx] = get_material_base_color(.Empty)
+	world.grid[idx] = .Empty
+	world.side[idx] = 0
+	world.vel_x[idx] = 0
+	world.vel_y[idx] = 0
+}
+// only move material, color, active state, and reset old position values
+//
+// **doesn't move velocity**
 move_cell :: proc(world: ^World, to, from: int) {
 	world.grid[to], world.grid[from] = world.grid[from], .Empty
 	world.updated[to] = world.tick
@@ -296,3 +302,6 @@ random_side :: proc() -> int {
 	return int(rand.uint32() & 1) * 2 - 1
 }
 
+tick_from_sec :: proc(sec: u32) -> u32 {
+	return sec * 60
+}
