@@ -129,37 +129,41 @@ move_cell :: proc(world: ^World, to, from: int) {
 update_grid :: proc(world: ^World) {
 	c_man := &world.chunk_manager
 	// fmt.println(c_man.active_even_chunk[:], c_man.active_odd_chunk[:] )
-
-	if world.tick % 2 == 0 {
-		#reverse for cidx, i in c_man.active_red_chunk {
-			loop_through_chunk(world, cidx)
-			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
-				unordered_remove_dynamic_array(&c_man.active_red_chunk, i)
-			}
-		}
-		#reverse for cidx, i in c_man.active_white_chunk {
-			loop_through_chunk(world, cidx)
-			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
-				unordered_remove_dynamic_array(&c_man.active_white_chunk, i)
-			}
-		}
-	} else {
-		#reverse for cidx, i in c_man.active_white_chunk {
-			loop_through_chunk(world, cidx)
-			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
-				unordered_remove_dynamic_array(&c_man.active_white_chunk, i)
-			}
-		}
-		#reverse for cidx, i in c_man.active_red_chunk {
-			loop_through_chunk(world, cidx)
-			if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
-				unordered_remove_dynamic_array(&c_man.active_red_chunk, i)
-			}
+	#reverse for &c, i in c_man.chunks {
+		if chunk_active(&c, world.tick) {
+			loop_through_region(world, i)
 		}
 	}
+	// if world.tick % 2 == 0 {
+	// 	#reverse for cidx, i in c_man.active_red_chunk {
+	// 		loop_through_region(world, cidx)
+	// 		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+	// 			unordered_remove_dynamic_array(&c_man.active_red_chunk, i)
+	// 		}
+	// 	}
+	// 	#reverse for cidx, i in c_man.active_white_chunk {
+	// 		loop_through_region(world, cidx)
+	// 		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+	// 			unordered_remove_dynamic_array(&c_man.active_white_chunk, i)
+	// 		}
+	// 	}
+	// } else {
+	// 	#reverse for cidx, i in c_man.active_white_chunk {
+	// 		loop_through_region(world, cidx)
+	// 		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+	// 			unordered_remove_dynamic_array(&c_man.active_white_chunk, i)
+	// 		}
+	// 	}
+	// 	#reverse for cidx, i in c_man.active_red_chunk {
+	// 		loop_through_region(world, cidx)
+	// 		if !is_chunk_active(&c_man.chunks[cidx], world.tick) {
+	// 			unordered_remove_dynamic_array(&c_man.active_red_chunk, i)
+	// 		}
+	// 	}
+	// }
 }
 
-loop_through_chunk ::  proc(world: ^World, cidx: int) {
+loop_through_region ::  proc(world: ^World, cidx: int) {
 	updated := false
 	cx, cy := chunk_idx_to_chunk_pos(cidx)
 	// fmt.println(cidx, ":", cx,cy )
@@ -302,6 +306,6 @@ random_side :: proc() -> int {
 	return int(rand.uint32() & 1) * 2 - 1
 }
 
-tick_from_sec :: proc(sec: u32) -> u32 {
-	return sec * 60
+tick_from_sec :: proc(sec: f32) -> u32 {
+	return u32( sec * 60 )
 }

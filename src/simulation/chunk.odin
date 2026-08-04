@@ -102,17 +102,20 @@ put_chunk_in_queue :: proc(world: ^World, cx, cy: int) {
 	manager := &world.chunk_manager
 	cx := math.clamp(cx, 0, Width_In_Chunk - 1)
 	cy := math.clamp(cy, 0, Height_In_Chunk - 1)
-	cidx := chunk_index_from_chunk_pos(cx, cy)
-	if !is_chunk_active(&manager.chunks[cidx], world.tick) {
-		if manager.chunks[cidx].white {
-			append(&manager.active_white_chunk, cidx)
-		} else {
-			append(&manager.active_red_chunk, cidx)
-		}
-		manager.chunks[cidx].last_updated_tick = world.tick
-		// fmt.println("odd:", manager.active_odd_chunk[:])
-		// fmt.println("even:", manager.active_even_chunk[:])
-	}
+	// cidx := chunk_index_from_chunk_pos(cx, cy)
+	chunk := chunk_from_chunk_pos(world.chunk_manager.chunks, cx, cy)
+	chunk.to_update_tick = world.tick + 1
+	chunk.last_updated_tick = world.tick
+	// if !chunk_active(&manager.chunks[cidx], world.tick) {
+	// 	if manager.chunks[cidx].white {
+	// 		append(&manager.active_white_chunk, cidx)
+	// 	} else {
+	// 		append(&manager.active_red_chunk, cidx)
+	// 	}
+	// 	manager.chunks[cidx].last_updated_tick = world.tick
+	// 	// fmt.println("odd:", manager.active_odd_chunk[:])
+	// 	// fmt.println("even:", manager.active_even_chunk[:])
+	// }
 }
 
 // auto clamping
@@ -134,7 +137,7 @@ wake_chunk_now :: proc(world: ^World, cx, cy: int) {
 }
 
 // maybe turn this back to field but for now use proc instead
-is_chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
+chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
 	if chunk.to_update_tick == 0 && chunk.last_updated_tick == 0 do return false // this acts like initially all chunk.active feild with false
 	return ( chunk.to_update_tick == tick || tick - chunk.last_updated_tick <= 4 ) // force chunk update if last_updated tick is less than 5 anyway
 }
