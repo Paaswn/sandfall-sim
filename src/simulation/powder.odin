@@ -22,7 +22,7 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) 
 		}
 		world.side[now] = side
 		cx, cy := to_chunk_pos(x + side, y + 1)
-		put_chunk_in_queue(world, cx, cy)
+		put_chunk_in_queue(world, cx, cy, x + side, y+1)
 		vx[next] = vx[now] * config.friction
 		vy[next] = vy[now] * config.friction
 		if check, ok := world_index(x, y + 1); ok && is_solid(world, check) {
@@ -62,7 +62,7 @@ powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		return false
 	}
 	cx, cy := to_chunk_pos(x + side, y)
-	put_chunk_in_queue(world, cx, cy)
+	put_chunk_in_queue(world, cx, cy, x+side, y)
 	vx[next] = vx[now] * config.friction
 	if is_liquid(grid, next) {
 		vx[next] *= config.damp
@@ -111,20 +111,20 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		vx[to] = vx[now]
 		vy[to] = vy[now]
 		cx, cy := to_chunk_pos(x, to_y)
-		put_chunk_in_queue(world, cx, cy)
+		put_chunk_in_queue(world, cx, cy, x , to_y)
 		if !through_liquid {
 			get_friction := false
 			if left, inside := world_index(x - 1, to_y); inside && is_solid(world, left) {
 				vx[left] += vy[now] * config.fall_drag
 				left_cx, left_cy := to_chunk_pos(x - 1, to_y)
-				put_chunk_in_queue(world, left_cx, left_cy)
+				put_chunk_in_queue(world, left_cx, left_cy, x-1, to_y)
 				world.side[left] = world.side[now]
 				get_friction = true
 			}
 			if right, inside := world_index(x + 1, to_y); inside && is_solid(world, right) {
 				vx[right] += vy[now] * config.fall_drag
 				right_cx, right_cy := to_chunk_pos(x + 1, to_y)
-				put_chunk_in_queue(world, right_cx, right_cy)
+				put_chunk_in_queue(world, right_cx, right_cy, x+1, to_y)
 				world.side[right] = world.side[now]
 				get_friction = true
 			}
