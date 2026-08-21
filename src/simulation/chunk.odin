@@ -4,8 +4,9 @@ import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
+// bound is always a local coordinate of a chunk
 Bound :: struct {
-    x, y, x2, y2: int
+	x, y, x2, y2: int,
 }
 Chunk_Manager :: struct {
 	// index of active odd chunk
@@ -16,44 +17,25 @@ Chunk_Manager :: struct {
 }
 
 Chunk :: struct {
-	active_bound:      Maybe( Bound ),
+	active_bound:      Maybe(Bound),
 	last_updated_tick: u32,
-	to_update_tick:    u32,
+	last_bound_reset:    u32,
 	// active:            bool,
 }
 
-update_bound :: proc {
-	update_bound_from_point,
-	update_bound_from_bound,
-}
-// currently, calling this function always required bound to not be nil
-update_bound_from_bound :: proc(chunk: ^Chunk, new_bound: Bound) {
-	assert(chunk.active_bound != nil, "Chunk's bound was nil")
-	bound := &chunk.active_bound.?
-	x := max(new_bound.x, bound.x)
-	y := max(new_bound.y, bound.y)
-	x2 := min(new_bound.x2, bound.x2)
-	y2 := min(new_bound.y2, bound.y2)
-	chunk.active_bound = Bound{x, y, x2, y2}
-}
-
-update_bound_from_point :: proc(chunk: ^Chunk, wx, wy: int) {
+update_bound :: proc(chunk: ^Chunk, wx, wy: int) {
 	bound, ok := chunk.active_bound.?
-	if !ok do bound = Bound{0,0,Chunk_Size, Chunk_Size}
+	if !ok do bound = Bound{Chunk_Size,Chunk_Size,0, 0}
 	resize_bound(&bound, wx, wy)
 	chunk.active_bound = bound
 }
 
 resize_bound :: proc(bound: ^Bound, wx, wy: int) {
     lx, ly := wx % Chunk_Size, wy % Chunk_Size
-    x, y, x2, y2 := max( lx-1, 0 ), max( ly-1, 0), min( lx+1, Chunk_Size), min( ly+1, Chunk_Size)
-    if bound, ok := chunk.active_bound.?; ok{
-        x = min(x, bound.x)
-        y = min(y, bound.y)
-        x2 = max(x2, bound.x2)
-        y2 = max(y2, bound.y2)
-    }
-    chunk.active_bound = Bound{x, y, x2, y2}  
+    bound.x = clamp(lx-3, 0, bound.x)
+	bound.y = clamp(ly-3, 0, bound.y)
+	bound.x2 = clamp(lx+4, bound.x2, Chunk_Size)
+	bound.y2 = clamp(ly+4, bound.y2, Chunk_Size)
 }
 
 delete_chunk_manager :: proc(manager: ^Chunk_Manager) {
@@ -99,23 +81,23 @@ is_chunk_outside :: proc(x, y: int) -> bool {
 	return x < 0 || x > Width_In_Chunk - 1 || y < 0 || y > Height_In_Chunk - 1
 }
 put_chunk_in_queue :: proc {
-    put_chunk_in_queue_chunk,
-    put_chunk_in_queue_idx
+	put_chunk_in_queue_chunk,
+	put_chunk_in_queue_idx,
 }
 
 put_chunk_in_queue_chunk :: proc(world: ^World, chunk: ^Chunk, wx, wy: int) {
-	chunk.to_update_tick = world.tick + 1
+	// chunk.to_update_tick = world.tick + 1
 	chunk.last_updated_tick = world.tick
-	region_bounding(chunk, wx, wy)
+	update_bound(chunk, wx, wy)
 }
 
-put_chunk_in_queue_idx :: proc(world: ^World, cx, cy: int, wx, wy: int) {
+put_chunk_in_queue_idx :: proc(world: ^World, cx, cy, wx, wy: int) {
 	cx := math.clamp(cx, 0, Width_In_Chunk - 1)
 	cy := math.clamp(cy, 0, Height_In_Chunk - 1)
 	chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
-	chunk.to_update_tick = world.tick + 1
+	// chunk.to_update_tick = world.tick + 1
 	chunk.last_updated_tick = world.tick
-	region_bounding(chunk, wx, wy)
+	update_bound(chunk, wx, wy)
 }
 
 // auto clamping
@@ -123,7 +105,7 @@ wake_chunk_next :: proc(world: ^World, cx, cy: int) {
 	x := math.clamp(cx, 0, Width_In_Chunk - 1)
 	y := math.clamp(cy, 0, Height_In_Chunk - 1)
 	chunk := chunk_from_chunk_pos(world.chunks, x, y)
-	chunk.to_update_tick = world.tick + 1
+	// chunk.to_update_tick = world.tick + 1
 	chunk.last_updated_tick = world.tick
 }
 
@@ -132,12 +114,12 @@ wake_chunk_now :: proc(world: ^World, cx, cy: int) {
 	x := math.clamp(cx, 0, Width_In_Chunk - 1)
 	y := math.clamp(cy, 0, Height_In_Chunk - 1)
 	chunk := chunk_from_chunk_pos(world.chunks, x, y)
-	chunk.to_update_tick = world.tick
+	// chunk.to_update_tick = world.tick
 	chunk.last_updated_tick = world.tick
 }
 
 // can be turned into a field
 chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
-	if chunk.to_update_tick == 0 && chunk.last_updated_tick == 0 do return false // this acts like initially all chunk.active feild with false
-	return chunk.to_update_tick == tick || tick - chunk.last_updated_tick <= 4 // force chunk update if last_updated tick is less than 5 anyway
+	if chunk.last_updated_tick == 0 do return false // this acts like initially all chunk.active feild with false
+	return tick - chunk.last_updated_tick <= 4 // force chunk update if last_updated tick is less than 5 anyway
 }

@@ -57,7 +57,7 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	step := int(math.clamp(vx[now], 0, Liquid.Max_Vx))
 	side := world.side[now]
 	to_x := x
-	if i, ok := world_index(x + side * step, y); ok && !is_liquid(world.grid, i) {
+	if i, ok := world_index(x + side * step, y); ok && !hittable(world, i) {
 		to_x = x + side * step
 	} else {
 		for s in 1 ..= step {

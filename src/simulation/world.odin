@@ -3,6 +3,7 @@ package simulation
 import "core:fmt"
 import "core:math"
 import "core:math/rand"
+import "core:strings"
 import rl "vendor:raylib"
 
 World :: struct {
@@ -138,7 +139,7 @@ update_grid :: proc(world: ^World) {
 			if chunk_active(&world.chunks[ci], world.tick) {
 				update_region(world, ci)
 			} else {
-			    world.chunks[ci].active_bound = nil;
+				world.chunks[ci].active_bound = nil
 			}
 		}
 	}
@@ -156,6 +157,10 @@ update_region :: proc(world: ^World, cidx: int) {
 	chunk := &world.chunks[cidx]
 	bound, ok := chunk.active_bound.?
 	if !ok do return
+	if world.tick - chunk.last_bound_reset >= 4 {
+		chunk.active_bound = nil
+		chunk.last_bound_reset = world.tick
+	}
 	for ly := bound.y2; ly >= bound.y; ly -= 1 {
 		start_lx, end_lx, step_lx := bound.x, bound.x2, 1
 		if world.tick % 2 != 0 {
@@ -165,7 +170,7 @@ update_region :: proc(world: ^World, cidx: int) {
 			step_lx = -1
 		}
 		for lx := start_lx; lx != end_lx; lx += step_lx {
-    		x, y := to_world_pos(cx, cy, lx, ly)
+			x, y := to_world_pos(cx, cy, lx, ly)
 			if y >= World_Height {
 				continue
 			}
@@ -173,41 +178,26 @@ update_region :: proc(world: ^World, cidx: int) {
 				continue
 			}
 
-			i := idx(x, y)
-			before := world.grid[i]
 			if update_cell_vertical(world, x, y) || update_cell_side(world, x, y) {
 				updated = true
-				after := world.grid[i]
-				if before == after {
-					continue
-				}
+				// after := world.grid[i]
 				local_x, local_y := x % Chunk_Size, y % Chunk_Size
-				if local_y == bound.y do region_bounding(chunk, x, y-1)
+				if local_y == bound.y do update_bound(chunk, x, y - 1)
 				if local_y == 0 {
-					put_chunk_in_queue(world, cx, cy - 1, x, y-1)
+					put_chunk_in_queue(world, cx, cy - 1, x, y - 1)
 				}
 				if local_x == 0 {
-					put_chunk_in_queue(world, cx - 1, cy, x-1, y)
+					put_chunk_in_queue(world, cx - 1, cy, x - 1, y)
 				}
 				if local_x == Chunk_Size - 1 {
-					put_chunk_in_queue(world, cx + 1, cy, x+1, y)
+					put_chunk_in_queue(world, cx + 1, cy, x + 1, y)
 				}
 			}
 		}
 	}
-	// for local_y := Chunk_Size - 1; local_y >= 0; local_y -= 1 {
-	// 	start_lx, end_lx, step_lx := 0, Chunk_Size, 1
-	// 	if world.tick % 2 != 0 {
-	// 		// local X v
-	// 		start_lx = Chunk_Size - 1
-	// 		end_lx = -1
-	// 		step_lx = -1
-	// 	}
-	// 	for local_x := start_lx; local_x != end_lx; local_x += step_lx {
-
-	// 	}
-	// }
-	if updated do world.chunks[cidx].last_updated_tick = world.tick
+	if updated {
+		chunk.last_updated_tick = world.tick
+	}
 
 }
 
