@@ -1,8 +1,8 @@
 package game
 
+import sim "../simulation"
 import "core:fmt"
 import "core:math"
-import sim "../simulation"
 import rl "vendor:raylib"
 
 Mouse_State :: Mouse
@@ -43,14 +43,13 @@ build_pixel_index :: proc(
 		}
 	} else {
 		// only render alive chunks
-		manager := &world.chunk_manager
-		for &c, i in manager.chunks {
+		for &c, i in world.chunks {
 			if !sim.chunk_active(&c, world.tick) {
 				continue
 			} else {
 				for local_y in 0 ..< sim.Chunk_Size {
 					for local_x in 0 ..< sim.Chunk_Size {
-						cx , cy := sim.chunk_idx_to_chunk_pos(i)
+						cx, cy := sim.chunk_idx_to_chunk_pos(i)
 						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
 						if idx, ok := sim.world_index(x, y); ok {
 							buf[idx] = world.color[idx]
@@ -58,48 +57,26 @@ build_pixel_index :: proc(
 					}
 				}
 			}
-		}
-		for cidx in manager.active_white_chunk {
-			if !sim.chunk_active(&manager.chunks[ cidx ], world.tick) {
-				continue
-			} else {
-				for local_y in 0 ..< sim.Chunk_Size {
-					for local_x in 0 ..< sim.Chunk_Size {
-						cx , cy := sim.chunk_idx_to_chunk_pos(cidx)
-						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
-						if idx, ok := sim.world_index(x, y); ok {
-							buf[idx] = world.color[idx]
-						}
-					}
-				}
-			}
-		}
-	}
-}
-build_pixel_pos :: proc(
-	world: ^sim.World,
-	buf: []rl.Color,
-	fill_color: proc(x, y: int, buf: []rl.Color, world: ^sim.World),
-) {
-	for y in 0 ..< sim.World_Height {
-		for x in 0 ..< sim.World_Width {
-			fill_color(x, y, buf, world)
 		}
 	}
 }
 
+
 render_debug_chunk :: proc(world: ^sim.World) {
-	for &chunk, i in world.chunk_manager.chunks {
+	for &chunk, i in world.chunks {
 		if sim.chunk_active(&chunk, world.tick) {
-			x := i % sim.Width_In_Chunk
-			y := i / sim.Width_In_Chunk
+		    cx, cy := sim.chunk_idx_to_chunk_pos(i)
 			S := sim.Scale
-			CS := sim.Chunk_Size
+			bound, ok := chunk.active_bound.?
+			if !ok do continue
+			// CS := sim.Chunk_Size
+			x, y := sim.to_world_pos(cx, cy, bound.x, bound.y)
+			x2, y2 := sim.to_world_pos(cx, cy, bound.x2, bound.y2)
 			rl.DrawRectangleLines(
-				i32(x * CS * S),
-				i32(y * CS * S),
-				i32(CS * S),
-				i32(CS * S),
+				i32(x * S),
+				i32(y * S),
+				i32((x2 - x) * S),
+				i32((y2 - y) * S),
 				rl.RED,
 			)
 		}

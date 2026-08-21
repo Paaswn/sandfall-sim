@@ -55,9 +55,12 @@ main :: proc() {
 			acc -= sim.Dt
 			world.tick += 1
 		}
-
-		game.build_pixel_buf(&instance)
-		rl.UpdateTexture(texture, raw_data(pixel_buf))
+		when ODIN_DEBUG {
+    		game.build_pixel_buf(&instance)
+            rl.UpdateTexture(texture, raw_data(pixel_buf))
+		} else {
+		    rl.UpdateTexture(texture, raw_data( world.color ))
+		}
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
