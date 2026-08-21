@@ -181,15 +181,14 @@ update_region :: proc(world: ^World, cidx: int) {
 			if update_cell_vertical(world, x, y) || update_cell_side(world, x, y) {
 				updated = true
 				// after := world.grid[i]
-				local_x, local_y := x % Chunk_Size, y % Chunk_Size
-				if local_y == bound.y do update_bound(chunk, x, y - 1)
-				if local_y == 0 {
+				if ly == bound.y do update_bound(chunk, x, y - 1)
+				if ly == 0 {
 					put_chunk_in_queue(world, cx, cy - 1, x, y - 1)
 				}
-				if local_x == 0 {
+				if lx == 0 {
 					put_chunk_in_queue(world, cx - 1, cy, x - 1, y)
 				}
-				if local_x == Chunk_Size - 1 {
+				if lx == Chunk_Size - 1 {
 					put_chunk_in_queue(world, cx + 1, cy, x + 1, y)
 				}
 			}
@@ -236,7 +235,7 @@ apply_gravity :: proc(
 	vx := world.vel_x
 	vy := world.vel_y
 	vy[now] = rl.Clamp(vy[now] + mat_config.down_acc * Dt32, 0, mat_type_config.Max_Vy)
-	vx[now] = rl.Clamp(vx[now], 0, mat_type_config.Max_Vx)
+	// vx[now] = rl.Clamp(vx[now], 0, mat_type_config.Max_Vx)
 }
 
 update_cell_vertical :: proc(world: ^World, x, y: int) -> bool {
