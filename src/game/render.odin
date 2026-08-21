@@ -21,8 +21,8 @@ build_pixel_buf :: proc(game: ^Game) {
 	case .Velocity_X:
 		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
 			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else if world.config[world.grid[idx]].type == .Powder do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Powder.Max_Vx)
-			else if world.config[world.grid[idx]].type == .Liquid do buf[idx] = get_vel_color(world.side[idx], world.vel_y[idx], sim.Liquid.Max_Vx)
+			else if world.config[world.grid[idx]].type == .Powder do buf[idx] = get_vel_color(world.side[idx], world.vel_x[idx], sim.Powder.Max_Vx)
+			else if world.config[world.grid[idx]].type == .Liquid do buf[idx] = get_vel_color(world.side[idx], world.vel_x[idx], sim.Liquid.Max_Vx)
 		})
 
 	case .Off:

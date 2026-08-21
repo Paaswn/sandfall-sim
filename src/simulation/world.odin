@@ -80,7 +80,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	@(static) total_spawn: u64 = 0
 	i := idx(x, y)
 	if world.grid[i] == material do return
-	world.updated[i] = world.tick
+	world.updated[i] = world.tick - 1
 	cx, cy := to_chunk_pos(x, y)
 	chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
 	put_chunk_in_queue(world, chunk, x, y)

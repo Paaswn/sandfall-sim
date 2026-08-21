@@ -22,7 +22,29 @@ Chunk :: struct {
 	// active:            bool,
 }
 
-region_bounding :: proc(chunk: ^Chunk, wx, wy: int) {
+update_bound :: proc {
+	update_bound_from_point,
+	update_bound_from_bound,
+}
+// currently, calling this function always required bound to not be nil
+update_bound_from_bound :: proc(chunk: ^Chunk, new_bound: Bound) {
+	assert(chunk.active_bound != nil, "Chunk's bound was nil")
+	bound := &chunk.active_bound.?
+	x := max(new_bound.x, bound.x)
+	y := max(new_bound.y, bound.y)
+	x2 := min(new_bound.x2, bound.x2)
+	y2 := min(new_bound.y2, bound.y2)
+	chunk.active_bound = Bound{x, y, x2, y2}
+}
+
+update_bound_from_point :: proc(chunk: ^Chunk, wx, wy: int) {
+	bound, ok := chunk.active_bound.?
+	if !ok do bound = Bound{0,0,Chunk_Size, Chunk_Size}
+	resize_bound(&bound, wx, wy)
+	chunk.active_bound = bound
+}
+
+resize_bound :: proc(bound: ^Bound, wx, wy: int) {
     lx, ly := wx % Chunk_Size, wy % Chunk_Size
     x, y, x2, y2 := max( lx-1, 0 ), max( ly-1, 0), min( lx+1, Chunk_Size), min( ly+1, Chunk_Size)
     if bound, ok := chunk.active_bound.?; ok{
