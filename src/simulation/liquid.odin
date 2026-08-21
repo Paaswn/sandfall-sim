@@ -1,8 +1,8 @@
 package simulation
 
-import "core:math/rand"
 import "core:fmt"
 import "core:math"
+import "core:math/rand"
 
 liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
 	grid := world.grid
@@ -57,24 +57,28 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	step := int(math.clamp(vx[now], 0, Liquid.Max_Vx))
 	side := world.side[now]
 	to_x := x
-	for s in 1 ..= step {
-		next_x := x + s * side
-		if is_outside(next_x, y) {
+	if i, ok := world_index(x + side * step, y); ok && !is_liquid(world.grid, i) {
+		to_x = x + side * step
+	} else {
+		for s in 1 ..= step {
+			next_x := x + s * side
+			if is_outside(next_x, y) {
 
-			world.side[now] *= -1
-			break
-		}
-		next := idx(next_x, y)
-		if hittable(world, next) {
-			check := idx(x - side, y)
-			if !(is_outside(x - side, y) || hittable(world, check)) {
 				world.side[now] *= -1
-				vx[now] *= config.friction
+				break
 			}
-			break
+			next := idx(next_x, y)
+			if hittable(world, next) {
+				check := idx(x - side, y)
+				if !(is_outside(x - side, y) || hittable(world, check)) {
+					world.side[now] *= -1
+					vx[now] *= config.friction
+				}
+				break
+			}
+			to_x = next_x
+			// if !is_outside(next_x, y + 1) && is_empty(grid, idx(next_x, y + 1)) do break
 		}
-		to_x = next_x
-		// if !is_outside(next_x, y + 1) && is_empty(grid, idx(next_x, y + 1)) do break
 	}
 	if to_x != x {
 		to := idx(to_x, y)
