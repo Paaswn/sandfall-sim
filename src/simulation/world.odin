@@ -1,8 +1,10 @@
 package simulation
 
+import "../profiling"
 import "core:fmt"
 import "core:math"
 import "core:math/rand"
+import "core:prof/spall"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -127,6 +129,9 @@ move_cell :: proc(world: ^World, to, from: int) {
 
 
 update_grid :: proc(world: ^World) {
+	when profiling.PROFILE {
+		spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
+	}
 	for y := Height_In_Chunk - 1; y >= 0; y -= 1 {
 		start_x, end_x, step_x := 0, Width_In_Chunk, 1
 		if world.tick % 2 == 0 {

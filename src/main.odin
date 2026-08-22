@@ -1,12 +1,22 @@
 package main
 
+import "profiling"
+import "core:prof/spall"
+import "core:sync"
 import "game"
 import sim "simulation"
 import rl "vendor:raylib"
-import "core:fmt"
-
 
 main :: proc() {
+    when profiling.PROFILE {
+        profiling.profiler = spall.context_create("profile.spall")
+       	defer spall.context_destroy(&profiling.profiler)
+       	backing := make([]u8, spall.BUFFER_DEFAULT_SIZE)
+       	defer delete(backing)
+        
+       	profiling.prof_buffer = spall.buffer_create(backing, u32(sync.current_thread_id()))
+       	defer spall.buffer_destroy(&profiling.profiler, &profiling.prof_buffer)
+    }
 	// raylib window init
 	rl.InitWindow(sim.World_Width * sim.Scale, sim.World_Height * sim.Scale, "sandfall")
 	rl.SetTargetFPS(120)
@@ -19,7 +29,7 @@ main :: proc() {
 
 	// create instance session
 
-	instance : game.Game
+	instance: game.Game
 	game.create_game(&instance)
 	defer game.delete_game(&instance)
 	world := &instance.world
@@ -39,7 +49,11 @@ main :: proc() {
 		acc += dt * TS[config.time_scale]
 		prev = now
 		game.update_mouse_state(&instance.mouse)
-		overlap := ( rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.bound) && instance.debug_ui.show ) || ( rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.float_uis.bound) && instance.debug_ui.float_uis.show )
+		overlap :=
+			(rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.bound) &&
+				instance.debug_ui.show) ||
+			(rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.float_uis.bound) &&
+					instance.debug_ui.float_uis.show)
 		if overlap {
 			instance.mouse.has_prev = false
 		} else {
@@ -56,10 +70,10 @@ main :: proc() {
 			world.tick += 1
 		}
 		when ODIN_DEBUG {
-    		game.build_pixel_buf(&instance)
-            rl.UpdateTexture(texture, raw_data(pixel_buf))
+			game.build_pixel_buf(&instance)
+			rl.UpdateTexture(texture, raw_data(pixel_buf))
 		} else {
-		    rl.UpdateTexture(texture, raw_data( world.color ))
+			rl.UpdateTexture(texture, raw_data(world.color))
 		}
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
@@ -76,7 +90,11 @@ main :: proc() {
 		}
 
 		if instance.debug_ui.float_uis.show {
-			game.material_list_selector(config, &instance.debug_ui, instance.debug_ui.float_uis.bound)
+			game.material_list_selector(
+				config,
+				&instance.debug_ui,
+				instance.debug_ui.float_uis.bound,
+			)
 		}
 
 		game.render_tool(config, &instance.mouse)
@@ -90,3 +108,4 @@ on_window_resize :: proc() {
 		rl.SetWindowSize(rl.GetRenderWidth(), rl.GetRenderHeight())
 	}
 }
+

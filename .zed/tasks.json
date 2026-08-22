@@ -7,4 +7,8 @@
     "label": "Run Released Build",
     "command": "./scripts/run_speed",
   },
+  {
+    "label": "Run Profiler Build",
+    "command": "./scripts/run_profile_speed",
+  },
 ]

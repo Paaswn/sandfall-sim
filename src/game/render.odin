@@ -1,13 +1,18 @@
 package game
 
+import "core:prof/spall"
 import sim "../simulation"
 import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
+import "../profiling"
 
 Mouse_State :: Mouse
 
 build_pixel_buf :: proc(game: ^Game) {
+    when profiling.PROFILE {
+        spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
+    }
 	debug_mode := game.config.debug_render
 	world := &game.world
 	buf := game.pixel_buf
