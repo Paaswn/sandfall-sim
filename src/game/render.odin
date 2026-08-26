@@ -1,18 +1,19 @@
 package game
 
-import "core:prof/spall"
+import "../profiling"
 import sim "../simulation"
 import "core:fmt"
 import "core:math"
+import "core:prof/spall"
+import "core:strings"
 import rl "vendor:raylib"
-import "../profiling"
 
 Mouse_State :: Mouse
 
 build_pixel_buf :: proc(game: ^Game) {
-    when profiling.PROFILE {
-        spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
-    }
+	when profiling.PROFILE {
+		spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
+	}
 	debug_mode := game.config.debug_render
 	world := &game.world
 	buf := game.pixel_buf
@@ -68,15 +69,31 @@ build_pixel_index :: proc(
 
 
 render_debug_chunk :: proc(world: ^sim.World) {
+	@(static) num: [9]cstring = {"0", "1", "2", "3", "4", "5", "6", "7", "8"}
 	for &chunk, i in world.chunks {
 		if sim.chunk_active(&chunk, world.tick) {
-		    cx, cy := sim.chunk_idx_to_chunk_pos(i)
+			cx, cy := sim.chunk_idx_to_chunk_pos(i)
 			S := sim.Scale
 			bound, ok := chunk.active_bound.?
 			if !ok do continue
 			// CS := sim.Chunk_Size
 			x, y := sim.to_world_pos(cx, cy, bound.x, bound.y)
 			x2, y2 := sim.to_world_pos(cx, cy, bound.x2, bound.y2)
+			i := world.tick - chunk.last_bound_reset
+			j := world.tick - chunk.last_updated_tick
+			to_reset: cstring
+			chunk_age: cstring
+			if i >= len(num) {
+				to_reset = fmt.ctprint(i)
+			} else {
+				to_reset = num[i]
+			}
+			if j >= len(num) {
+				chunk_age = fmt.ctprint(j)
+			} else {
+				chunk_age = num[j]
+			}
+			rl.DrawText(fmt.ctprint(to_reset, chunk_age), i32( (x + x2) / 2 * S - 20), i32((y + y2) / 2 * S), 20, rl.WHITE)
 			rl.DrawRectangleLines(
 				i32(x * S),
 				i32(y * S),
