@@ -30,12 +30,22 @@ update_bound :: proc(chunk: ^Chunk, wx, wy: int) {
 	chunk.active_bound = bound
 }
 
-resize_bound :: proc(bound: ^Bound, wx, wy: int) {
-    lx, ly := wx % Chunk_Size, wy % Chunk_Size
+update_bound_local :: proc(chunk: ^Chunk, lx, ly: int) {
+	bound, ok := chunk.active_bound.?
+	if !ok do bound = Bound{Chunk_Size,Chunk_Size,0, 0}
+	resize_bound_local(&bound, lx, ly)
+	chunk.active_bound = bound
+}
+resize_bound_local :: proc(bound: ^Bound, lx, ly: int) {
     bound.x = clamp(lx-3, 0, bound.x)
 	bound.y = clamp(ly-3, 0, bound.y)
 	bound.x2 = clamp(lx+4, bound.x2, Chunk_Size)
 	bound.y2 = clamp(ly+4, bound.y2, Chunk_Size)
+}
+
+resize_bound :: proc(bound: ^Bound, wx, wy: int) {
+    lx, ly := wx % Chunk_Size, wy % Chunk_Size
+    resize_bound_local(bound, lx, ly)
 }
 
 delete_chunk_manager :: proc(manager: ^Chunk_Manager) {
@@ -80,6 +90,7 @@ to_world_pos :: proc(cx, cy, x, y: int) -> (int, int) {
 is_chunk_outside :: proc(x, y: int) -> bool {
 	return x < 0 || x > Width_In_Chunk - 1 || y < 0 || y > Height_In_Chunk - 1
 }
+
 put_chunk_in_queue :: proc {
 	put_chunk_in_queue_chunk,
 	put_chunk_in_queue_idx,
