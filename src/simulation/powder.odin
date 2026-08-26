@@ -54,7 +54,7 @@ powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		return false
 	}
 	if is_solid(world, next) {
-		if vx[now] >= config.impact_thresh { 	// maybe we can flip side here
+		if vx[now] >= config.impact_thresh { 	// maybe flipping side here
 			vx[next] += vx[now] * config.impact_to_side
 			vx[now] *= config.damp
 			world.side[now] *= -1

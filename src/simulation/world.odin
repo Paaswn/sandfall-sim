@@ -91,7 +91,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	if world.config[material].type == .Liquid {
 		world.side[i] = random_side()
 	}
-	world.vel_x[i] = 2
+	world.vel_x[i] = 0
 	world.vel_y[i] = 2
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, x, y, total_spawn)
@@ -162,11 +162,12 @@ update_region :: proc(world: ^World, cidx: int) {
 	chunk := &world.chunks[cidx]
 	bound, ok := chunk.active_bound.?
 	if !ok do return
-	if world.tick - chunk.last_bound_reset >= 4 {
+	if world.tick - chunk.last_bound_reset >= 8 {
 		chunk.active_bound = nil
 		chunk.last_bound_reset = world.tick
 	}
-	for ly := bound.y2; ly >= bound.y; ly -= 1 {
+	min_y := bound.y
+	for ly := bound.y2; ly >= min_y; ly -= 1 {
 		start_lx, end_lx, step_lx := bound.x, bound.x2, 1
 		if world.tick % 2 != 0 {
 			// local X v
@@ -186,7 +187,11 @@ update_region :: proc(world: ^World, cidx: int) {
 			if update_cell_vertical(world, x, y) || update_cell_side(world, x, y) {
 				updated = true
 				// after := world.grid[i]
-				if ly == bound.y do update_bound(chunk, x, y - 1)
+				if ly == min_y {
+					new_y := max(ly - 1, 0)
+					update_bound_local(chunk, lx, new_y)
+					min_y = new_y
+				}
 				if ly == 0 {
 					put_chunk_in_queue(world, cx, cy - 1, x, y - 1)
 				}
@@ -251,10 +256,11 @@ update_cell_vertical :: proc(world: ^World, x, y: int) -> bool {
 		#partial switch mat_type {
 		case .Powder:
 			apply_gravity(world, config, Powder, now)
-			if powder_move_down(world, config, x, y) do return true
+			powder_move_down(world, config, x, y) or_return
 		case .Liquid:
 			apply_gravity(world, config, Liquid, now)
-			if liquid_move_down(world, config, x, y) do return true
+			// liquid_move_down(world, config, x, y) or_return
+			liquid_move(world, config, x, y) or_return
 		}
 	}
 	return false
