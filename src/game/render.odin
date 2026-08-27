@@ -52,14 +52,13 @@ build_pixel_index :: proc(
 		for &c, i in world.chunks {
 			if !sim.chunk_active(&c, world.tick) {
 				continue
-			} else {
-				for local_y in 0 ..< sim.Chunk_Size {
-					for local_x in 0 ..< sim.Chunk_Size {
-						if idx, ok := sim.world_index(
-							sim.to_world_pos(sim.to_chunk_pos(i), {local_x, local_y}),
-						); ok {
-							buf[idx] = world.color[idx]
-						}
+			}
+			for local_y in 0 ..< sim.Chunk_Size {
+				for local_x in 0 ..< sim.Chunk_Size {
+					if idx, ok := sim.world_index(
+						sim.to_world_pos(sim.to_chunk_pos(i), {local_x, local_y}),
+					); ok {
+						buf[idx] = world.color[idx]
 					}
 				}
 			}
@@ -74,10 +73,18 @@ render_debug_chunk :: proc(world: ^sim.World) {
 		if sim.chunk_active(&chunk, world.tick) {
 			S :: sim.Scale
 			bound, ok := chunk.active_bound.?
+			cp := sim.to_chunk_pos(i)
+			pos := sim.to_world_pos(cp, {0, 0})
+			rl.DrawRectangleLines(
+				i32(pos.x * S),
+				i32(pos.y * S),
+				i32(sim.Chunk_Size * S),
+				i32(sim.Chunk_Size * S),
+				rl.GREEN,
+			)
 			if !ok do continue
 			// CS := sim.Chunk_Size
-			cp := sim.to_chunk_pos(i)
-			pos := sim.to_world_pos(cp, {bound.x, bound.y})
+			pos = sim.to_world_pos(cp, {bound.x, bound.y})
 			x, y := pos.x, pos.y
 			pos2 := sim.to_world_pos(cp, {bound.x2, bound.y2})
 			x2, y2 := pos2.x, pos2.y
