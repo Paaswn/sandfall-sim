@@ -36,7 +36,7 @@ main :: proc() {
 	events := &instance.events
 	pixel_buf := instance.pixel_buf
 	config := &instance.config
-	TS := sim.T_Scales
+	TS := sim.Time_Scales
 
 	// main loop
 	prev := rl.GetTime()

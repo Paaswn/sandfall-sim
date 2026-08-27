@@ -9,10 +9,10 @@ Material_Type :: enum u8 {
 	Hard, // static material that can't be damaged by any game object
 	Semi_Hard, // static material that can be slightly damaged by game object
 }
-random_shade :: proc(base: rl.Color, x, y, variance: int, salt: u64) -> rl.Color {
+random_shade :: proc(base: rl.Color, pos: World_Pos, variance: int, salt: u64) -> rl.Color {
 	// 1. Generate a single random offset for uniform shading
 	// If variance is 30, offset will be between -30 and +30
-	hash := (x * 73856093) ~ (y * 19349663) ~ int((salt * 83492791))
+	hash := (pos.x * 73856093) ~ (pos.y * 19349663) ~ int((salt * 83492791))
 	
 
 	offset := (hash % (variance * 2 + 1)) - variance

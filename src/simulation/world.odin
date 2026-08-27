@@ -21,22 +21,23 @@ World :: struct {
 	config:    World_Config,
 }
 
-
+IVec2 :: [2]int
+Chunk_Pos :: distinct IVec2
+World_Pos :: distinct IVec2
+Local_Pos :: distinct IVec2
 World_Config :: [Material]Material_Config
 
-create_world :: proc() -> World {
-	return World {
-		0,
-		make([]f32, World_Width * World_Height),
-		make([]f32, World_Width * World_Height),
-		make([]Material, World_Width * World_Height),
-		make([]rl.Color, World_Width * World_Height),
-		make([]Chunk, Width_In_Chunk * Height_In_Chunk),
-		make([]u32, World_Width * World_Height),
-		make([]int, World_Width * World_Height),
-		make([dynamic]Particle, 128),
-		load_world_config(Config_Path),
-	}
+create_world :: proc(world: ^World) {
+	world.tick = 0
+	world.vel_x = make([]f32, World_Width * World_Height)
+	world.vel_y = make([]f32, World_Width * World_Height)
+	world.grid = make([]Material, World_Width * World_Height)
+	world.color = make([]rl.Color, World_Width * World_Height)
+	world.chunks = make([]Chunk, Width_In_Chunk * Height_In_Chunk)
+	world.updated = make([]u32, World_Width * World_Height)
+	world.side = make([]int, World_Width * World_Height)
+	world.particles = make([dynamic]Particle, 128)
+	world.config = load_world_config(Config_Path)
 }
 
 delete_world :: proc(world: ^World) {
@@ -50,11 +51,34 @@ delete_world :: proc(world: ^World) {
 	delete(world.side)
 }
 
-idx :: proc(x, y: int) -> int {
+idx :: proc {
+    idx_xy,
+    idx_v
+}
+
+@(private="file")
+idx_xy :: proc(x, y: int) -> int {
 	return y * World_Width + x
 }
 
-world_index :: proc(x, y: int) -> (index: int, inside: bool) {
+@(private="file")
+idx_v :: proc(pos: World_Pos) -> int {
+	return pos.y * World_Width + pos.x
+}
+world_index :: proc {
+    world_index_from_xy,
+    world_index_from_vec
+}
+
+@(private="file")
+world_index_from_vec :: proc(pos: World_Pos) -> (index: int, inside: bool) {
+	inside = !is_outside(pos.x, pos.y)
+	index = idx(pos.x, pos.y)
+	return
+}
+
+@(private="file")
+world_index_from_xy :: proc(x, y: int) -> (index: int, inside: bool) {
 	inside = !is_outside(x, y)
 	index = idx(x, y)
 	return
@@ -64,29 +88,29 @@ is_outside :: proc(x, y: int) -> bool {
 	return x < 0 || y < 0 || x > World_Width - 1 || y > World_Height - 1
 }
 
-circle_brush_spawn :: proc(world: ^World, ox, oy, r: int, material: Material) {
-	for x in ox - r ..= ox + r {
-		for y in oy - r ..= oy + r {
+circle_brush_spawn :: proc(world: ^World, o: World_Pos, r: int, material: Material) {
+	for x in o.x - r ..= o.x + r {
+		for y in o.y - r ..= o.y + r {
 			if is_outside(x, y) {
 				continue
 			}
-			dx := x - ox
-			dy := y - oy
+			dx := x - o.x
+			dy := y - o.y
 			if dx * dx + dy * dy < r * r {
-				spawn_material(world, material, x, y)
+				spawn_material(world, material, { x, y })
 			}
 		}
 	}
 }
 
-spawn_material :: proc(world: ^World, material: Material, x, y: int) {
+spawn_material :: proc(world: ^World, material: Material, pos: World_Pos) {
 	@(static) total_spawn: u64 = 0
-	i := idx(x, y)
+	i := idx(pos.x, pos.y)
 	if world.grid[i] == material do return
 	world.updated[i] = world.tick - 1
-	cx, cy := to_chunk_pos(x, y)
-	chunk := chunk_from_chunk_pos(world.chunks, cx, cy)
-	put_chunk_in_queue(world, chunk, x, y)
+	cpos := to_chunk_pos(pos)
+	chunk := get_chunk(world.chunks, cpos)
+	activate_chunk(world, chunk, pos)
 
 	if world.config[material].type == .Liquid {
 		world.side[i] = random_side()
@@ -94,7 +118,7 @@ spawn_material :: proc(world: ^World, material: Material, x, y: int) {
 	world.vel_x[i] = 0
 	world.vel_y[i] = 2
 	world.grid[i] = material
-	world.color[i] = get_material_color(material, x, y, total_spawn)
+	world.color[i] = get_material_color(material, pos, total_spawn)
 	total_spawn += 1
 }
 swap_cell :: proc(world: ^World, to, from: int) {
@@ -140,11 +164,11 @@ update_grid :: proc(world: ^World) {
 			step_x = -1
 		}
 		for x := start_x; x != end_x; x += step_x {
-			ci := chunk_index_from_chunk_pos(x, y)
-			if chunk_active(&world.chunks[ci], world.tick) {
-				update_region(world, ci)
+			c := get_chunk(world.chunks, Chunk_Pos{ x, y })
+			if chunk_active(c, world.tick) {
+				update_region(world, c, x, y)
 			} else {
-				world.chunks[ci].active_bound = nil
+				c.active_bound = nil
 			}
 		}
 	}
@@ -156,10 +180,8 @@ update_grid :: proc(world: ^World) {
 }
 
 
-update_region :: proc(world: ^World, cidx: int) {
+update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int) {
 	updated := false
-	cx, cy := chunk_idx_to_chunk_pos(cidx)
-	chunk := &world.chunks[cidx]
 	bound, ok := chunk.active_bound.?
 	if !ok do return
 	if world.tick - chunk.last_bound_reset >= 8 {
@@ -176,7 +198,8 @@ update_region :: proc(world: ^World, cidx: int) {
 			step_lx = -1
 		}
 		for lx := start_lx; lx != end_lx; lx += step_lx {
-			x, y := to_world_pos(cx, cy, lx, ly)
+			pos := to_world_pos({ cx, cy }, { lx, ly })
+			x, y := pos.x, pos.y
 			if y >= World_Height {
 				continue
 			}
@@ -189,17 +212,17 @@ update_region :: proc(world: ^World, cidx: int) {
 				// after := world.grid[i]
 				if ly == min_y {
 					new_y := max(ly - 1, 0)
-					update_bound_local(chunk, lx, new_y)
+					update_bound(chunk, Local_Pos{ lx, new_y })
 					min_y = new_y
 				}
 				if ly == 0 {
-					put_chunk_in_queue(world, cx, cy - 1, x, y - 1)
+					activate_chunk(world, Chunk_Pos{ cx, cy - 1 }, { x, y - 1 })
 				}
 				if lx == 0 {
-					put_chunk_in_queue(world, cx - 1, cy, x - 1, y)
+					activate_chunk(world, Chunk_Pos{ cx - 1, cy }, { x - 1, y })
 				}
 				if lx == Chunk_Size - 1 {
-					put_chunk_in_queue(world, cx + 1, cy, x + 1, y)
+					activate_chunk(world, Chunk_Pos{cx + 1, cy}, { x + 1, y })
 				}
 			}
 		}

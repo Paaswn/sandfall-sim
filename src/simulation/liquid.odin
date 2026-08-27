@@ -32,7 +32,6 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		to := idx(x, to_y)
 		vx[to] = vx[now]
 		vy[to] = vy[now]
-		cx, cy := to_chunk_pos(x, to_y)
 		// switch {
 		// case is_outside(x - 1, to_y):
 		// case is_outside(x + 1, to_y):
@@ -43,7 +42,7 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		// 	vx[now] *= config.friction
 		// }
 
-		put_chunk_in_queue(world, cx, cy, x, to_y)
+		activate_chunk(world, to_chunk_pos(World_Pos{ x, to_y }), { x, to_y })
 		move_cell(world, to, now)
 		return true
 	}
@@ -83,8 +82,7 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		is_empty(grid, to) or_return
 		vx[to] = vx[now]
 		vy[to] = vy[now]
-		cx, cy := to_chunk_pos(to_x, y)
-		put_chunk_in_queue(world, cx, cy, to_x, y)
+		activate_chunk(world, to_chunk_pos(World_Pos{ to_x, y }), { to_x, y })
 		move_cell(world, to, now)
 		return true
 	}
@@ -104,8 +102,7 @@ liquid_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) 
 	is_empty(grid, to) or_return
 	vx[to] = vx[now]
 	vy[to] = vy[now]
-	cx, cy := to_chunk_pos(x + side, y + 1)
-	put_chunk_in_queue(world, cx, cy, x + side, y + 1)
+	activate_chunk(world, to_chunk_pos(World_Pos{ x + side, y + 1 }), { x + side, y + 1 })
 	move_cell(world, to, now)
 	return true
 }
@@ -163,8 +160,7 @@ liquid_move :: proc(world: ^World, config: Material_Config, x0, y0: int) -> bool
 	vx[to] = vx[now]
 	vy[to] = vy[now]
 	move_cell(world, to, now)
-	cx, cy := to_chunk_pos(to_x, to_y)
-	put_chunk_in_queue(world, cx, cy, to_x, to_y)
+	activate_chunk(world, to_chunk_pos(World_Pos{ to_x, to_y }), { to_x, to_y })
 	return true
 }
 @(private = "file")

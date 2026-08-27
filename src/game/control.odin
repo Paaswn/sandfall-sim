@@ -107,7 +107,7 @@ keyboard_handler :: proc(game: ^Game) {
 			config.current_mat = .Empty
 		case .Increase_Tick:
 			config.time_scale += 1
-			if config.time_scale >= i32( len(sim.T_Scales) ) - 1 do config.time_scale = i32( len(sim.T_Scales) ) - 1
+			if config.time_scale >= i32( len(sim.Time_Scales) ) - 1 do config.time_scale = i32( len(sim.Time_Scales) ) - 1
 		case .Decrease_Tick:
 			config.time_scale -= 1
 			if config.time_scale <= 0 do config.time_scale = 0

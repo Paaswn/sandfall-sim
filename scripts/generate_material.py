@@ -35,12 +35,12 @@ Material :: enum u8 {{
 {make_all_material_name()}
 }}
 
-get_material_color :: proc(mat: Material, x, y: int, salt: u64) -> (color: rl.Color) {{
+get_material_color :: proc(mat: Material, pos: World_Pos, salt: u64) -> (color: rl.Color) {{
 	#partial switch mat {{
 	case .Empty:
 		color = rl.BLACK
 	case:
-		color = random_shade(get_material_base_color(mat), x, y, 20, salt)
+		color = random_shade(get_material_base_color(mat), pos, 20, salt)
 	case .Water:
 		color = rl.DARKBLUE
     }}

@@ -10,22 +10,20 @@ Event_Queues :: struct {
 	hot_reload:  bool,
 	point_spawned: int,
 }
+
 Material :: sim.Material
 World :: sim.World
 Debug :: sim.Debug
 Spawn_Event :: struct {
-	x0:       int,
-	y0:       int,
-	x1:       int,
-	y1:       int,
+    prev_pos: sim.World_Pos,
+    pos: sim.World_Pos,
 	r:        int,
 	material: Material,
 }
 
 Spawn_Point :: struct {
 	point:    int,
-	x0:       int,
-	y0:       int,
+	pos: sim.World_Pos,
 	r:        int,
 	material: Material,
 }
@@ -48,7 +46,7 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 		brush_line(world, se)
 	}
 	for _, se in events.spawn_points {
-		sim.circle_brush_spawn(world, se.x0, se.y0, se.r, se.material)
+		sim.circle_brush_spawn(world, se.pos, se.r, se.material)
 	}
 	if events.hot_reload {
 		hot_reload(world)
@@ -62,8 +60,8 @@ create_spawn_point :: proc(mouse: ^Mouse, events: ^Event_Queues, config: ^Game_C
 	deleted := false
 	for _, se in events.spawn_points {
 		if intersect(
-			se.x0 - se.r,
-			se.y0 - se.r,
+			se.pos.x - se.r,
+			se.pos.y - se.r,
 			2 * se.r,
 			2 * se.r,
 			mouse.world.x - config.brush_size,
@@ -83,8 +81,7 @@ create_spawn_point :: proc(mouse: ^Mouse, events: ^Event_Queues, config: ^Game_C
 		events.point_spawned,
 		Spawn_Point {
 			events.point_spawned,
-			mouse.world.x,
-			mouse.world.y,
+			mouse.world,
 			config.brush_size,
 			config.current_mat,
 		},
@@ -115,21 +112,19 @@ mouse_handler :: proc( instance: ^Game ) {
 			}
 			if rl.IsMouseButtonDown(.LEFT) {
 				if len(spawn) < 512 {
-					msx, msy := mouse.world[0], mouse.world[1]
-					omsx, omsy := mouse.prev_world[0], mouse.prev_world[1]
 					if mouse.has_prev {
 						append(
 							spawn,
-							Spawn_Event{omsx, omsy, msx, msy, config.brush_size, config.current_mat},
+							Spawn_Event{mouse.prev_world, mouse.world, config.brush_size, config.current_mat},
 						)
 					} else {
 						append(
 							spawn,
-							Spawn_Event{msx, msy, msx, msy, config.brush_size, config.current_mat},
+							Spawn_Event{mouse.world, mouse.world, config.brush_size, config.current_mat},
 						)
 						mouse.has_prev = true
 					}
-					mouse.prev_world = {msx, msy}
+					mouse.prev_world = mouse.world
 				}
 			} else do mouse.has_prev = false
 		
@@ -143,24 +138,24 @@ mouse_handler :: proc( instance: ^Game ) {
 }
 
 brush_line :: proc(world: ^World, se: Spawn_Event) {
-	dx := abs(se.x1 - se.x0)
-	dy := -abs(se.y1 - se.y0)
+	dx := abs(se.pos.x - se.prev_pos.x)
+	dy := -abs(se.pos.y - se.prev_pos.y)
 
 	sx := 1
-	if se.x0 >= se.x1 do sx = -1
+	if se.prev_pos.x >= se.pos.x do sx = -1
 
 	sy := 1
-	if se.y0 >= se.y1 do sy = -1
+	if se.prev_pos.y >= se.pos.y do sy = -1
 
 	err := dx + dy
 
-	x := se.x0
-	y := se.y0
+	x := se.prev_pos.x
+	y := se.prev_pos.y
 
 	for {
-		sim.circle_brush_spawn(world, x, y, se.r, se.material)
+		sim.circle_brush_spawn(world, { x, y }, se.r, se.material)
 
-		if x == se.x1 && y == se.y1 {
+		if x == se.pos.x && y == se.pos.y {
 			break
 		}
 

@@ -16,21 +16,21 @@ Game :: struct {
 // maybe add mouse click here
 Mouse :: struct {
 	pos:        rl.Vector2,
-	world:      [2]int,
-	prev_world: [2]int,
+	world:      sim.World_Pos,
+	prev_world: sim.World_Pos,
 	wheel:      Wheel_State,
 	has_prev:   bool,
 }
 
 Tool :: enum {
 	Pipette,
-	Brush
+	Brush,
 }
 
 Tool_Manager :: struct {
 	just_switched: u8,
-	curr_tool: Tool,
-	prev_tool: Tool,
+	curr_tool:     Tool,
+	prev_tool:     Tool,
 }
 
 update_mouse_state :: proc(mouse: ^Mouse) {
@@ -47,18 +47,24 @@ hot_reload :: proc(world: ^sim.World) {
 }
 
 create_game :: proc(instance: ^Game) {
-		instance.world = sim.create_world()
-		instance.config = Game_Config{sim.Brush_Size, sim.Start_Time_Scale, sim.Debug.Off, false, sim.Start_Mat, sim.Scale, {0, .Brush, nil}}
-		instance.events = make_event_queues()
-		instance.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
-		instance.mouse = Mouse{{}, {}, {}, .None, false}
-		instance.debug_ui = create_ui()
+	sim.create_world(&instance.world)
+	instance.config = Game_Config {
+		sim.Brush_Size,
+		sim.Start_Time_Scale,
+		sim.Debug.Off,
+		false,
+		sim.Start_Mat,
+		sim.Scale,
+		{0, .Brush, nil},
+	}
+	instance.events = make_event_queues()
+	instance.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
+	instance.mouse = Mouse{{}, {}, {}, .None, false}
+	instance.debug_ui = create_ui()
 }
 
-mouse_world :: proc(mouse_pos: rl.Vector2) -> [2]int {
-	mouse_scale_x := int(mouse_pos.x / sim.Scale)
-	mouse_scale_y := int(mouse_pos.y / sim.Scale)
-	return [2]int{mouse_scale_x, mouse_scale_y}
+mouse_world :: proc(mouse_pos: rl.Vector2) -> sim.World_Pos {
+	return sim.World_Pos( mouse_pos ) / sim.Scale
 }
 
 delete_game :: proc(game: ^Game) {
@@ -69,11 +75,11 @@ delete_game :: proc(game: ^Game) {
 }
 
 Game_Config :: struct {
-	brush_size:   int,
-	time_scale:   i32,
-	debug_render:   sim.Debug,
+	brush_size:        int,
+	time_scale:        i32,
+	debug_render:      sim.Debug,
 	show_chunk_border: bool,
-	current_mat:  Material,
-	window_scale: int,
-	tool_man: Tool_Manager
+	current_mat:       Material,
+	window_scale:      int,
+	tool_man:          Tool_Manager,
 }

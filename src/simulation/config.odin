@@ -11,7 +11,7 @@ Debug :: enum {
 	Velocity_X,
 }
 // runtime config
-T_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
+Time_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
 // constant
 Config_Path :: "./config/world_config.json"
 Region_Size :: 16

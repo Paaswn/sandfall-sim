@@ -55,9 +55,9 @@ build_pixel_index :: proc(
 			} else {
 				for local_y in 0 ..< sim.Chunk_Size {
 					for local_x in 0 ..< sim.Chunk_Size {
-						cx, cy := sim.chunk_idx_to_chunk_pos(i)
-						x, y := sim.to_world_pos(cx, cy, local_x, local_y)
-						if idx, ok := sim.world_index(x, y); ok {
+						if idx, ok := sim.world_index(
+							sim.to_world_pos(sim.to_chunk_pos(i), {local_x, local_y}),
+						); ok {
 							buf[idx] = world.color[idx]
 						}
 					}
@@ -72,13 +72,15 @@ render_debug_chunk :: proc(world: ^sim.World) {
 	@(static) num: [9]cstring = {"0", "1", "2", "3", "4", "5", "6", "7", "8"}
 	for &chunk, i in world.chunks {
 		if sim.chunk_active(&chunk, world.tick) {
-			cx, cy := sim.chunk_idx_to_chunk_pos(i)
-			S := sim.Scale
+			S :: sim.Scale
 			bound, ok := chunk.active_bound.?
 			if !ok do continue
 			// CS := sim.Chunk_Size
-			x, y := sim.to_world_pos(cx, cy, bound.x, bound.y)
-			x2, y2 := sim.to_world_pos(cx, cy, bound.x2, bound.y2)
+			cp := sim.to_chunk_pos(i)
+			pos := sim.to_world_pos(cp, {bound.x, bound.y})
+			x, y := pos.x, pos.y
+			pos2 := sim.to_world_pos(cp, {bound.x2, bound.y2})
+			x2, y2 := pos2.x, pos2.y
 			i := world.tick - chunk.last_bound_reset
 			j := world.tick - chunk.last_updated_tick
 			to_reset: cstring
@@ -93,7 +95,13 @@ render_debug_chunk :: proc(world: ^sim.World) {
 			} else {
 				chunk_age = num[j]
 			}
-			rl.DrawText(fmt.ctprint(to_reset, chunk_age), i32( (x + x2) / 2 * S - 20), i32((y + y2) / 2 * S), 20, rl.WHITE)
+			rl.DrawText(
+				fmt.ctprint(to_reset, chunk_age),
+				i32((x + x2) / 2 * S - 20),
+				i32((y + y2) / 2 * S),
+				20,
+				rl.WHITE,
+			)
 			rl.DrawRectangleLines(
 				i32(x * S),
 				i32(y * S),
