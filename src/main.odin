@@ -96,7 +96,9 @@ main :: proc() {
 				    game.reset_debugger(debugger)
 				}
 				sim.update_particles(&world.particles)
-				world.tick += 1
+				if debugger.len <= game.Debugger_Size {
+    				world.tick += 1
+				}
 			}
 			acc -= sim.Dt
 		
