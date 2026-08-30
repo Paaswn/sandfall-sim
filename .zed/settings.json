@@ -1,3 +1,15 @@
 {
-  "disable_ai": true
+  "disable_ai": true,
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/.jj",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/classpath",
+    "**/settings",
+    "odin-imgui",
+  ],
 }

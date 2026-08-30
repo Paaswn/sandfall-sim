@@ -11,6 +11,14 @@ import imgui_rl "imgui_impl_raylib"
 import imgui "../odin-imgui"
 
 main :: proc() {
+    dmy_buf: [32]u8
+    hms_buf: [32]u8
+    handle, err := os.open(fmt.tprintf("FallingSand-%v-%v.log",time.to_unix_seconds(time.now())), { .Write, .Create })
+    defer os.close(handle)
+    assert(err == nil ,"Cannot open log file")
+    file_logger := log.create_file_logger(handle)
+    defer log.destroy_file_logger(file_logger)
+    context.logger = file_logger
 	when profiling.PROFILE {
 		profiling.profiler = spall.context_create("profile.spall")
 		defer spall.context_destroy(&profiling.profiler)
