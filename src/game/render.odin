@@ -1,5 +1,6 @@
 package game
 
+import "core:log"
 import "../profiling"
 import sim "../simulation"
 import "core:fmt"
@@ -10,12 +11,11 @@ import rl "vendor:raylib"
 
 Mouse_State :: Mouse
 
-build_pixel_buf :: proc(game: ^Game) {
+build_pixel_buf :: proc(game: ^Game, world: ^World) {
 	when profiling.PROFILE {
 		spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
 	}
 	debug_mode := game.config.debug_render
-	world := &game.world
 	buf := game.pixel_buf
 	switch debug_mode {
 	case .Velocity_Y:
@@ -32,9 +32,7 @@ build_pixel_buf :: proc(game: ^Game) {
 		})
 
 	case .Off:
-		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: ^sim.World) {
-			buf[idx] = world.color[idx]
-		})
+		log.panic("This shouldn't be reachable")
 	}
 
 }
@@ -43,26 +41,8 @@ build_pixel_index :: proc(
 	buf: []rl.Color,
 	fill_color: proc(idx: int, buf: []rl.Color, world: ^sim.World),
 ) {
-	when ODIN_DEBUG {
-		for _, idx in world.grid {
-			fill_color(idx, buf, world)
-		}
-	} else {
-		// only render alive chunks
-		for &c, i in world.chunks {
-			if !sim.chunk_active(&c, world.tick) {
-				continue
-			}
-			for local_y in 0 ..< sim.Chunk_Size {
-				for local_x in 0 ..< sim.Chunk_Size {
-					if idx, ok := sim.world_index(
-						sim.to_world_pos(sim.to_chunk_pos(i), {local_x, local_y}),
-					); ok {
-						buf[idx] = world.color[idx]
-					}
-				}
-			}
-		}
+	for _, idx in world.grid {
+		fill_color(idx, buf, world)
 	}
 }
 

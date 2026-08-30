@@ -50,7 +50,6 @@ event_listener :: proc(world: ^World, events: ^Event_Queues) {
 	}
 	if events.hot_reload {
 		hot_reload(world)
-		fmt.eprintln("hot reloaded!")
 		events.hot_reload = false
 	}
 	clear_queues(events)

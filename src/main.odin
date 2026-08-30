@@ -1,5 +1,8 @@
 package main
 
+import "core:time"
+import "core:fmt"
+import "core:os"
 import "core:log"
 import "core:prof/spall"
 import "core:sync"
@@ -7,13 +10,9 @@ import "game"
 import "profiling"
 import sim "simulation"
 import rl "vendor:raylib"
-import imgui_rl "imgui_impl_raylib"
-import imgui "../odin-imgui"
 
 main :: proc() {
-    dmy_buf: [32]u8
-    hms_buf: [32]u8
-    handle, err := os.open(fmt.tprintf("FallingSand-%v-%v.log",time.to_unix_seconds(time.now())), { .Write, .Create })
+    handle, err := os.open(fmt.tprintf(".log/FallingSand-%v.log",time.to_unix_seconds(time.now())), { .Write, .Create })
     defer os.close(handle)
     assert(err == nil ,"Cannot open log file")
     file_logger := log.create_file_logger(handle)
@@ -29,11 +28,11 @@ main :: proc() {
 		defer spall.buffer_destroy(&profiling.profiler, &profiling.prof_buffer)
 	}
 	// imgui init
-	imgui.CreateContext()
-	defer imgui.DestroyContext()
+	// imgui.CreateContext()
+	// defer imgui.DestroyContext()
 
-	imgui_rl.init()
-	defer imgui_rl.shutdown()
+	// imgui_rl.init()
+	// defer imgui_rl.shutdown()
 	// raylib window init
 	rl.InitWindow(sim.World_Width * sim.Scale, sim.World_Height * sim.Scale, "sandfall")
 	rl.SetTargetFPS(120)
@@ -48,17 +47,20 @@ main :: proc() {
 	instance: game.Game
 	game.create_game(&instance)
 	defer game.delete_game(&instance)
+	log.info("Initialized Game struct")
 
 	world := &instance.world
 	events := &instance.events
 	pixel_buf := instance.pixel_buf
 	config := &instance.config
+	debugger := &instance.debugger
 	TS := sim.Time_Scales
 
 	// main loop
 	prev := rl.GetTime()
 	acc: f64 = 0
 
+	log.info("Starting Game...")
 	for !rl.WindowShouldClose() {
 	    
 		now := rl.GetTime()
@@ -80,33 +82,47 @@ main :: proc() {
 		game.keyboard_handler(&instance)
 
 		for acc >= sim.Dt {
-    		clear(&world.movement)
 			game.event_listener(world, events)
-			sim.update_grid(world)
-			sim.update_particles(&world.particles)
+			if debugger.on && debugger.len >= game.Debugger_Buf_Size {
+    			sim.update_grid(world)
+                world = &debugger.frames[debugger.current_frame]
+			} else {
+			    world = &instance.world
+    			clear(&world.movement)
+				sim.update_grid(world)
+				if debugger.on {
+				    game.copy_to_frame(debugger, world)
+				} else {
+				    game.reset_debugger(debugger)
+				}
+				sim.update_particles(&world.particles)
+				world.tick += 1
+			}
 			acc -= sim.Dt
-			world.tick += 1
+		
 		}
-		when ODIN_DEBUG {
-			game.build_pixel_buf(&instance)
+		if config.debug_render != .Off {
+			game.build_pixel_buf(&instance, world)
 			rl.UpdateTexture(texture, raw_data(pixel_buf))
 		} else {
 			rl.UpdateTexture(texture, raw_data(world.color))
 		}
-		imgui_rl.process_events()
-		imgui_rl.new_frame()
-		imgui.NewFrame()
+		// imgui_rl.process_events()
+		// imgui_rl.new_frame()
+		// imgui.NewFrame()
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
 		// game.render_particles(world.particles)
-		
+		if config.show_material_movement {
+    		for p in world.movement {
+    			np := sim.Scale * p
+    			rl.DrawLine(i32(np.x)+2, i32(np.y)+2, i32(np.z)+2, i32(np.w)+2, rl.PINK)
+    		}
+		}
+
 		if config.show_chunk_border {
 			game.render_debug_chunk(world)
-			for p in world.movement {
-				np := sim.Scale * p
-				rl.DrawLine(i32(np.x)+2, i32(np.y)+2, i32(np.z)+2, i32(np.w)+2, rl.PINK)
-			}
 		}
 
 		if instance.debug_ui.show {
@@ -122,9 +138,9 @@ main :: proc() {
 			)
 		}
 		game.render_tool(config, &instance.mouse)
-		imgui.ShowDemoWindow()
-		imgui.Render()
-		imgui_rl.render_draw_data(imgui.GetDrawData())
+		// imgui.ShowDemoWindow()
+		// imgui.Render()
+		// imgui_rl.render_draw_data(imgui.GetDrawData())
 		rl.EndDrawing()
 	}
 }

@@ -28,6 +28,10 @@ Action :: enum {
 	Debug_Velocity_Y,
 	Debug_Velocity_X,
 	Debug_Chunk,
+	Debug_Material_Movement,
+	Debugger_Toggle,
+	Debugger_Forward,
+	Debugger_Backward,
 	Select_Empty,
 	Increase_Tick,
 	Decrease_Tick,
@@ -54,7 +58,11 @@ Key_Binds :: [Action]Input {
 	.Hot_Reload          = {.None, .R, {.Ctrl}},
 	.Open_Debug_Menu = {.None, .F1, {.None}},
 	.Toggle_Brush_Tool = {.None, .B, {.None}},
-	.Toggle_Pipette_Tool = {.None, .Q, {.None}}
+	.Toggle_Pipette_Tool = {.None, .Q, {.None}},
+	.Debugger_Toggle = {.None, .SPACE, {.None}},
+	.Debugger_Forward = {.None, .L, {.None}},
+	.Debugger_Backward = {.None, .H, {.None}},
+	.Debug_Material_Movement = {.None, .FIVE, {.Ctrl}}
 }
 
 keyboard_handler :: proc(game: ^Game) {
@@ -89,6 +97,14 @@ keyboard_handler :: proc(game: ^Game) {
 			continue
 		}
 		switch action {
+		case .Debugger_Backward:
+            if game.debugger.on do backward_frame(&game.debugger)
+		case .Debugger_Forward:
+    		if game.debugger.on do forward_frame(&game.debugger)
+		case .Debugger_Toggle:
+		    game.debugger.on = !game.debugger.on
+		case .Debug_Material_Movement:
+		    config.show_material_movement = !config.show_material_movement
 		case .Toggle_Brush_Tool:
 			switch_tool(config, .Brush)
 		case .Toggle_Pipette_Tool:

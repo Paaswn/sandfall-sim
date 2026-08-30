@@ -58,14 +58,13 @@ draw_ui :: proc(instance: ^Game) {
 	conf := &instance.config;
 	dbg_ui := &instance.debug_ui
 	edit_modes := &dbg_ui.edit_modes
-	rl.DrawRectangleRoundedLines(dbg_ui.bound, 0.1, 20, rl.WHITE)
+	rl.GuiPanel(dbg_ui.bound, "Debug Panel")
+	// rl.DrawRectangleRoundedLines(, 0.1, 20, rl.WHITE)
 	material_list_selector(conf, dbg_ui, { 20, 50, 200, 100 })
-	when ODIN_DEBUG {
-		debug_mode_as_int := i32(conf.debug_render)
-		if rl.GuiDropdownBox({20, 20, 50, 25}, "Off;Vy;Vx", &debug_mode_as_int, edit_modes[.Debug_Render]) {
-			edit_modes[.Debug_Render] = !edit_modes[.Debug_Render]
-			conf.debug_render = sim.Debug(debug_mode_as_int)
-		}
+	debug_mode_as_int := i32(conf.debug_render)
+	if rl.GuiDropdownBox({20, 20, 50, 25}, "Off;Vy;Vx", &debug_mode_as_int, edit_modes[.Debug_Render]) {
+		edit_modes[.Debug_Render] = !edit_modes[.Debug_Render]
+		conf.debug_render = sim.Debug(debug_mode_as_int)
 	}
 	if rl.GuiDropdownBox({20, 160, 50, 25}, "0.01;0.05;0.1;0.5;0.75;1", &conf.time_scale, edit_modes[.Time_Edit]) {
 		edit_modes[.Time_Edit] = !edit_modes[.Time_Edit]
