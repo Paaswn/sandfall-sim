@@ -144,6 +144,7 @@ liquid_move :: proc(world: ^World, config: Material_Config, x0, y0: int) -> bool
 			break
 		}
 
+		vx[now] *= config.friction
 		e2 := 2 * err
 
 		if e2 >= dy {
@@ -158,6 +159,9 @@ liquid_move :: proc(world: ^World, config: Material_Config, x0, y0: int) -> bool
 	}
 	moved := ( to_x != x0 || to_y != y0 ) && (to != now)
 	moved or_return
+	if rand.float32() < 0.1 {
+	    world.side[now] *= -1
+	}
 	vx[to] = vx[now]
 	vy[to] = vy[now]
 	move_cell(world, to, now)

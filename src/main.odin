@@ -1,23 +1,29 @@
 package main
 
-import "core:time"
 import "core:fmt"
-import "core:os"
 import "core:log"
+import "core:os"
 import "core:prof/spall"
 import "core:sync"
+import "core:time"
 import "game"
 import "profiling"
 import sim "simulation"
 import rl "vendor:raylib"
 
 main :: proc() {
-    handle, err := os.open(fmt.tprintf(".log/FallingSand-%v.log",time.to_unix_seconds(time.now())), { .Write, .Create })
-    defer os.close(handle)
-    assert(err == nil ,"Cannot open log file")
-    file_logger := log.create_file_logger(handle)
-    defer log.destroy_file_logger(file_logger)
-    context.logger = file_logger
+	// handle, err := os.open(
+	// 	fmt.tprintf(".log/FallingSand-%v.log", time.to_unix_seconds(time.now())),
+	// 	{.Write, .Create},
+	// )
+	// defer os.close(handle)
+	// assert(err == nil, "Cannot open log file")
+	// file_logger := log.create_file_logger(handle)
+	// defer log.destroy_file_logger(file_logger)
+	// context.logger = file_logger
+	console_logger := log.create_console_logger()
+	defer log.destroy_console_logger(console_logger)
+	context.logger = console_logger
 	when profiling.PROFILE {
 		profiling.profiler = spall.context_create("profile.spall")
 		defer spall.context_destroy(&profiling.profiler)
@@ -43,7 +49,7 @@ main :: proc() {
 	rl.UnloadImage(image)
 	defer rl.UnloadTexture(texture)
 
-	// create game instance 
+	// create game instance
 	instance: game.Game
 	game.create_game(&instance)
 	defer game.delete_game(&instance)
@@ -62,11 +68,7 @@ main :: proc() {
 
 	log.info("Starting Game...")
 	for !rl.WindowShouldClose() {
-	    
-		now := rl.GetTime()
-		dt := now - prev
-		acc += dt * TS[config.time_scale]
-		prev = now
+
 		game.update_mouse_state(&instance.mouse)
 		overlap :=
 			(rl.CheckCollisionPointRec(instance.mouse.pos, instance.debug_ui.bound) &&
@@ -79,30 +81,43 @@ main :: proc() {
 			game.mouse_handler(&instance)
 		}
 
+		now := rl.GetTime()
 		game.keyboard_handler(&instance)
-
-		for acc >= sim.Dt {
-			game.event_listener(world, events)
-			if debugger.on && debugger.len >= game.Debugger_Buf_Size {
-    			sim.update_grid(world)
-                world = &debugger.frames[debugger.current_frame]
-			} else {
-			    world = &instance.world
+		if debugger.on && debugger.len >= game.Debugger_Size {
+    		world = game.current_debug_frame(debugger)
+    		if debugger.process_next_frame {
+    			world = &instance.world
+    			game.dispatch_event(world, events)
     			clear(&world.movement)
+    			world.tick += 1
+    			sim.update_grid(world)
+    			game.copy_to_frame(debugger, world)
+    			game.forward_frame(debugger)
+    			debugger.process_next_frame = false
+    		}
+		} else {
+    		dt := now - prev
+    		acc += dt * TS[config.time_scale]
+			for acc >= sim.Dt {
+				world = &instance.world
+				game.dispatch_event(world, events)
+				clear(&world.movement)
 				sim.update_grid(world)
 				if debugger.on {
-				    game.copy_to_frame(debugger, world)
+					game.copy_to_frame(debugger, world)
 				} else {
-				    game.reset_debugger(debugger)
+					game.reset_debugger(debugger)
 				}
 				sim.update_particles(&world.particles)
-				if debugger.len <= game.Debugger_Size {
-    				world.tick += 1
+				if debugger.len < game.Debugger_Size {
+					world.tick += 1
 				}
+				acc -= sim.Dt
+
 			}
-			acc -= sim.Dt
-		
 		}
+		prev = now
+		
 		if config.debug_render != .Off {
 			game.build_pixel_buf(&instance, world)
 			rl.UpdateTexture(texture, raw_data(pixel_buf))
@@ -117,21 +132,36 @@ main :: proc() {
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
 		// game.render_particles(world.particles)
 		if config.show_material_movement {
-    		for p in world.movement {
-    			np := sim.Scale * p
-    			rl.DrawLine(i32(np.x)+2, i32(np.y)+2, i32(np.z)+2, i32(np.w)+2, rl.PINK)
-    		}
+			for p in world.movement {
+				np := sim.Scale * p
+				rl.DrawLine(i32(np.x) + 2, i32(np.y) + 2, i32(np.z) + 2, i32(np.w) + 2, rl.PINK)
+			}
 		}
 
 		if config.show_chunk_border {
 			game.render_debug_chunk(world)
 		}
 
+		if debugger.on {
+			rl.DrawText(
+				fmt.ctprintf(
+					"Oldest Tick:  %v\nCurrent Tick: %v\nLatest Tick:  %v\nMain Tick:    %v",
+					game.first_debug_frame(debugger).tick,
+					game.current_debug_frame(debugger).tick,
+					game.last_debug_frame(debugger).tick,
+					instance.world.tick,
+				),
+				500,
+				500,
+				20,
+				rl.WHITE,
+			)
+		}
 		if instance.debug_ui.show {
 			game.draw_ui(&instance)
 			rl.DrawFPS(100, 20)
 		}
-		
+
 		if instance.debug_ui.float_uis.show {
 			game.material_list_selector(
 				config,
@@ -145,6 +175,7 @@ main :: proc() {
 		// imgui_rl.render_draw_data(imgui.GetDrawData())
 		rl.EndDrawing()
 	}
+	log.info("Closing Game...")
 }
 
 

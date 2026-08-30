@@ -64,12 +64,8 @@ render_debug_chunk :: proc(world: ^sim.World) {
 				i32(sim.Chunk_Size * S),
 				color,
 			)
-			if !ok do continue
+			// if !ok do continue
 			// CS := sim.Chunk_Size
-			pos = sim.to_world_pos(cp, {bound.x, bound.y})
-			x, y := pos.x, pos.y
-			pos2 := sim.to_world_pos(cp, {bound.x2, bound.y2})
-			x2, y2 := pos2.x, pos2.y
 			i := world.tick - chunk.last_bound_reset
 			j := world.tick - chunk.last_updated_tick
 			to_reset: cstring
@@ -86,11 +82,16 @@ render_debug_chunk :: proc(world: ^sim.World) {
 			}
 			rl.DrawText(
 				fmt.ctprint(to_reset, chunk_age),
-				i32((x + x2) / 2 * S - 20),
-				i32((y + y2) / 2 * S),
+				i32((pos.x + sim.Chunk_Size / 2) * S - 20),
+				i32((pos.y + sim.Chunk_Size / 2) * S),
 				20,
 				rl.WHITE,
 			)
+			ok or_continue
+			pos = sim.to_world_pos(cp, {bound.x, bound.y})
+			x, y := pos.x, pos.y
+			pos2 := sim.to_world_pos(cp, {bound.x2, bound.y2})
+			x2, y2 := pos2.x, pos2.y
 			rl.DrawRectangleLines(
 				i32(x * S),
 				i32(y * S),

@@ -186,17 +186,17 @@ update_grid :: proc(world: ^World) {
 update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int)  {
     updated := false
 	bound, ok := chunk.active_bound.?
-	if !ok do return
-	if world.tick - chunk.last_bound_reset >= 8 {
+	if world.tick - chunk.last_bound_reset >= 8 || !ok {
 		chunk.active_bound = nil
 		chunk.last_bound_reset = world.tick
 	}
 	min_y := bound.y
 	for ly := bound.y2; ly >= min_y; ly -= 1 {
-		start_lx, end_lx, step_lx := bound.x, bound.x2, 1
+	    if ly >= Chunk_Size do continue
+		start_lx, end_lx, step_lx := bound.x, min( bound.x2+1, Chunk_Size), 1
 		if world.tick % 2 != 0 {
 			// local X v
-			start_lx = bound.x2 - 1
+			start_lx = min( bound.x2, Chunk_Size-1 )
 			end_lx = bound.x - 1
 			step_lx = -1
 		}

@@ -36,13 +36,15 @@ Tool_Manager :: struct {
 	prev_tool:     Tool,
 }
 
-Debugger_Buf_Size :: 16
+Debugger_Size :: 16
 Debugger :: struct {
-    on: bool,
-	current_frame: i16,
-	frames:      [Debugger_Buf_Size]World,
-	write_index: i16,
-	len: u16
+	frames: [Debugger_Size]World,
+	on:     bool,
+	head:   u16,
+	cursor: u16,
+	tail:   u16,
+	len:    u16,
+	process_next_frame: bool
 }
 
 
@@ -59,21 +61,52 @@ delete_debugger :: proc(debugger: ^Debugger) {
 }
 
 reset_debugger :: proc(debugger: ^Debugger) {
-    debugger.write_index = 0;
-    debugger.current_frame = 0;
-    debugger.len = 0;
+    debugger.len = 0
 }
 
-backward_frame :: proc(debugger: ^Debugger, frame :i16 = 1) {
-    debugger.current_frame = ( debugger.current_frame + Debugger_Buf_Size - frame ) % Debugger_Buf_Size
+backward_frame :: proc(debugger: ^Debugger, frame: u16 = 1) {
+    debugger.process_next_frame = false
+    if debugger.cursor == debugger.head || debugger.len <= 1 {
+        return
+    }
+	debugger.cursor = (debugger.cursor + Debugger_Size - frame) % Debugger_Size
 }
 
-forward_frame :: proc(debugger: ^Debugger, frame: i16 = 1) {
-    debugger.current_frame = ( debugger.current_frame + frame ) % Debugger_Buf_Size
+forward_frame :: proc(debugger: ^Debugger, frame: u16 = 1) {
+    if debugger.cursor == debugger.tail || debugger.len <= 1 {
+        debugger.process_next_frame = true
+        return
+    }
+	debugger.cursor = (debugger.cursor + frame) % Debugger_Size
 }
 
+current_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+    return &debugger.frames[debugger.cursor]
+}
+first_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+    
+    return &debugger.frames[debugger.head]
+}
+last_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+    
+    return &debugger.frames[debugger.tail]
+}
 copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
-	frame := &debugger.frames[debugger.write_index]
+    if debugger.len == 0 {
+        debugger.head = 0
+        debugger.tail = 0
+        debugger.cursor = 0
+    } else {
+        debugger.tail = (debugger.tail + 1) % Debugger_Size
+    }
+    if debugger.len < Debugger_Size {
+        debugger.len += 1
+    } else {
+        debugger.head = (debugger.head + 1) % Debugger_Size
+    }
+	frame := &debugger.frames[debugger.tail]
+
+	// copy current world to frame
 	frame.tick = world.tick
 	frame.config = world.config
 	copy(frame.movement[:], world.movement[:])
@@ -84,9 +117,7 @@ copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
 	copy(frame.updated, world.updated)
 	copy(frame.vel_x, world.vel_x)
 	copy(frame.vel_y, world.vel_y)
-	debugger.len = min(debugger.len+1, Debugger_Buf_Size)
-	debugger.write_index += 1;
-	if debugger.write_index >= Debugger_Buf_Size do debugger.write_index = 0
+	//
 }
 update_mouse_state :: proc(mouse: ^Mouse) {
 	mouse_pos := rl.GetMousePosition()

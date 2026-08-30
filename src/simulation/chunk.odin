@@ -53,7 +53,7 @@ update_bound_local :: proc(chunk: ^Chunk, pos: Local_Pos) {
 
 @(private="file")
 resize_bound_world :: proc(bound: ^Bound, pos: World_Pos) {
-	lpos: Local_Pos =  transmute(Local_Pos)pos % Chunk_Size
+	lpos :=  Local_Pos( pos ) % Chunk_Size
 	resize_bound_local(bound, lpos)
 }
 
@@ -143,7 +143,7 @@ put_chunk_in_queue_chunk :: proc(world: ^World, chunk: ^Chunk, pos: World_Pos) {
 put_chunk_in_queue_idx :: proc(world: ^World, cpos: Chunk_Pos, wpos: World_Pos) {
 	cx := math.clamp(cpos.x, 0, Width_In_Chunk - 1)
 	cy := math.clamp(cpos.y, 0, Height_In_Chunk - 1)
-	chunk := chunk_from_chunk_pos(world.chunks, { cx, cy })
+	chunk := get_chunk(world.chunks, Chunk_Pos{ cx, cy })
 	// chunk.to_update_tick = world.tick + 1
 	chunk.last_updated_tick = world.tick
 	update_bound(chunk, wpos)

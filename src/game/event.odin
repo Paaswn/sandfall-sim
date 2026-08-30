@@ -41,7 +41,7 @@ clear_queues :: proc(events: ^Event_Queues) {
 	clear(&events.spawn)
 }
 
-event_listener :: proc(world: ^World, events: ^Event_Queues) {
+dispatch_event :: proc(world: ^World, events: ^Event_Queues) {
 	for se in events.spawn {
 		brush_line(world, se)
 	}
