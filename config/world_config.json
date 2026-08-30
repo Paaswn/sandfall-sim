@@ -5,11 +5,11 @@
     "variance": 0
   },
   "Cement": {
-    "type": "Semi_Hard" ,
+    "type": "Semi_Hard",
     "color": "DARKGRAY",
     "variance": 20
   },
- "Sand": {
+  "Sand": {
     "type": "Powder",
     "down_acc": 30,
     "slide_thresh": 1.5,
@@ -44,7 +44,7 @@
     "side_thresh": 0.2,
     "friction": 0.98,
     "damp": 0.3,
-    "impact_to_side": 0.9,
+    "impact_to_side": 0.6,
     "impact_thresh": 2.5,
     "slide_drag": 0.1,
     "fall_drag": 0.1,
