@@ -1,5 +1,7 @@
 package game
 
+import "core:log"
+import "core:container/queue"
 import sim "../simulation"
 import "core:fmt"
 import rl "vendor:raylib"
@@ -11,6 +13,7 @@ Game :: struct {
 	pixel_buf: []rl.Color,
 	mouse:     Mouse,
 	debug_ui:  Ui_Manager,
+	debugger: Debugger
 }
 
 // maybe add mouse click here
@@ -27,6 +30,25 @@ Tool :: enum {
 	Brush,
 }
 
+Debugger :: struct {
+    movement: []sim.World_Pos,
+    frames: [20]Debug_Frame,
+    write_index: u16,
+}
+
+Debug_Frame :: struct {
+    material: []Material,
+    vel_x: []f32,
+    vel_y: []f32,
+}
+
+init_debugger :: proc(debugger: ^Debugger) {
+    debugger.movement = make([]sim.World_Pos, sim.World_Size) 
+}
+
+delete_debugger :: proc(debugger: ^Debugger) {
+    delete(debugger.movement)
+}
 Tool_Manager :: struct {
 	just_switched: u8,
 	curr_tool:     Tool,
@@ -43,6 +65,7 @@ update_mouse_state :: proc(mouse: ^Mouse) {
 }
 
 hot_reload :: proc(world: ^sim.World) {
+    log.info("Hot reload materials' config!")
 	world.config = sim.load_world_config(sim.Config_Path)
 }
 
@@ -72,6 +95,7 @@ delete_game :: proc(game: ^Game) {
 	delete_event_queues(&game.events)
 	delete(game.pixel_buf)
 	delete_ui(&game.debug_ui)
+	delete_debugger(&game.debugger)
 }
 
 Game_Config :: struct {

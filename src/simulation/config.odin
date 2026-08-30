@@ -1,5 +1,6 @@
 package simulation
 
+import "core:log"
 import "core:encoding/json"
 import "core:fmt"
 import "core:os"
@@ -24,6 +25,8 @@ Dt: f64 : 1.0 / 60.0
 Dt32: f32 : 1.0 / 60.0
 World_Width :: 1920 / Scale
 World_Height :: 1080 / Scale
+World_Size :: World_Height * World_Width
+Chunk_Amount :: Width_In_Chunk * Height_In_Chunk
 Gravity: f32 : 980
 Scale :: 4
 Brush_Size :: 4
@@ -53,7 +56,7 @@ load_world_config :: proc(path: string) -> (res: World_Config) {
 	defer delete(temp_map)
 	unmarshal_err := json.unmarshal_any(data, &temp_map)
 	if unmarshal_err != nil {
-		fmt.eprintfln("Failed to parse config file, loaded fallback config")
+		log.warn("Failed to parse config file, fallback config was loaded")
 		return Fallback_Conf
 	}
 	enum_arr: World_Config

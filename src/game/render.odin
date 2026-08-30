@@ -75,12 +75,14 @@ render_debug_chunk :: proc(world: ^sim.World) {
 			bound, ok := chunk.active_bound.?
 			cp := sim.to_chunk_pos(i)
 			pos := sim.to_world_pos(cp, {0, 0})
+			color := rl.GREEN
+			color.a = 89
 			rl.DrawRectangleLines(
 				i32(pos.x * S),
 				i32(pos.y * S),
 				i32(sim.Chunk_Size * S),
 				i32(sim.Chunk_Size * S),
-				rl.GREEN,
+				color,
 			)
 			if !ok do continue
 			// CS := sim.Chunk_Size

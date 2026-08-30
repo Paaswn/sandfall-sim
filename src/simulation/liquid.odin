@@ -84,6 +84,7 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		vy[to] = vy[now]
 		activate_chunk(world, to_chunk_pos(World_Pos{ to_x, y }), { to_x, y })
 		move_cell(world, to, now)
+		append(&world.movement, [4]int{x, y, to_x, y})
 		return true
 	}
 	return false
@@ -161,6 +162,7 @@ liquid_move :: proc(world: ^World, config: Material_Config, x0, y0: int) -> bool
 	vy[to] = vy[now]
 	move_cell(world, to, now)
 	activate_chunk(world, to_chunk_pos(World_Pos{ to_x, to_y }), { to_x, to_y })
+	append(&world.movement, [4]int{x0, y0, to_x, to_y})
 	return true
 }
 @(private = "file")

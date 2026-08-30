@@ -59,10 +59,10 @@ resize_bound_world :: proc(bound: ^Bound, pos: World_Pos) {
 
 @(private="file")
 resize_bound_local :: proc(bound: ^Bound, pos: Local_Pos) {
-	bound.x = clamp(pos.x - 3, 0, bound.x)
-	bound.y = clamp(pos.y - 3, 0, bound.y)
-	bound.x2 = clamp(pos.x + 4, bound.x2, Chunk_Size)
-	bound.y2 = clamp(pos.y + 4, bound.y2, Chunk_Size)
+	bound.x = clamp(pos.x - 2, 0, bound.x)
+	bound.y = clamp(pos.y - 2, 0, bound.y)
+	bound.x2 = clamp(pos.x + 3, bound.x2, Chunk_Size)
+	bound.y2 = clamp(pos.y + 3, bound.y2, Chunk_Size)
 }
 
 delete_chunk_manager :: proc(manager: ^Chunk_Manager) {
@@ -153,20 +153,4 @@ put_chunk_in_queue_idx :: proc(world: ^World, cpos: Chunk_Pos, wpos: World_Pos) 
 chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
 	if chunk.last_updated_tick == 0 do return false // this acts like initially all chunk.active feild with false
 	return tick - chunk.last_updated_tick <= 4 // force chunk update if last_updated tick is less than 5 anyway
-}
-
-@(test)
-chunk_activation_test :: proc(t: ^testing.T) {
-	X, Y :: 32, 32
-	lx, ly := 1, 0
-	world: World
-	create_world(&world)
-	defer delete_world(&world)
-	world.tick = 1
-	spawn_material(&world, .Sand, { X, Y })
-	update_grid(&world)
-	c :: chunk_from_world_pos
-	// testing.expect(t, chunk_active(c(world.chunks, X, Y), world.tick))
-	// testing.expect(t, chunk_active(c(world.chunks, X, Y-1), world.tick))
-
 }

@@ -19,6 +19,7 @@ World :: struct {
 	side:      []int, // will be packed inside mat id
 	particles: [dynamic]Particle,
 	config:    World_Config,
+	movement: [dynamic][4]int,
 }
 
 IVec2 :: [2]int
@@ -38,6 +39,7 @@ create_world :: proc(world: ^World) {
 	world.side = make([]int, World_Width * World_Height)
 	world.particles = make([dynamic]Particle, 128)
 	world.config = load_world_config(Config_Path)
+	world.movement = make([dynamic][4]int, World_Size) 
 }
 
 delete_world :: proc(world: ^World) {
@@ -49,6 +51,7 @@ delete_world :: proc(world: ^World) {
 	delete(world.updated)
 	delete(world.particles)
 	delete(world.side)
+	delete(world.movement)
 }
 
 idx :: proc {
@@ -180,8 +183,8 @@ update_grid :: proc(world: ^World) {
 }
 
 
-update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int) {
-	updated := false
+update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int)  {
+    updated := false
 	bound, ok := chunk.active_bound.?
 	if !ok do return
 	if world.tick - chunk.last_bound_reset >= 8 {
@@ -228,9 +231,8 @@ update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int) {
 		}
 	}
 	if updated {
-		chunk.last_updated_tick = world.tick
+	    chunk.last_updated_tick = world.tick
 	}
-
 }
 
 Update_Context :: struct {
@@ -279,11 +281,11 @@ update_cell_vertical :: proc(world: ^World, x, y: int) -> bool {
 		#partial switch mat_type {
 		case .Powder:
 			apply_gravity(world, config, Powder, now)
-			powder_move_down(world, config, x, y) or_return
+			return powder_move_down(world, config, x, y)
 		case .Liquid:
 			apply_gravity(world, config, Liquid, now)
 			// liquid_move_down(world, config, x, y) or_return
-			liquid_move(world, config, x, y) or_return
+			return liquid_move(world, config, x, y)
 		}
 	}
 	return false

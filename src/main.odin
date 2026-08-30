@@ -1,22 +1,31 @@
 package main
 
-import "profiling"
+import "core:log"
 import "core:prof/spall"
 import "core:sync"
 import "game"
+import "profiling"
 import sim "simulation"
 import rl "vendor:raylib"
+import imgui_rl "imgui_impl_raylib"
+import imgui "../odin-imgui"
 
 main :: proc() {
-    when profiling.PROFILE {
-        profiling.profiler = spall.context_create("profile.spall")
-       	defer spall.context_destroy(&profiling.profiler)
-       	backing := make([]u8, spall.BUFFER_DEFAULT_SIZE)
-       	defer delete(backing)
-        
-       	profiling.prof_buffer = spall.buffer_create(backing, u32(sync.current_thread_id()))
-       	defer spall.buffer_destroy(&profiling.profiler, &profiling.prof_buffer)
-    }
+	when profiling.PROFILE {
+		profiling.profiler = spall.context_create("profile.spall")
+		defer spall.context_destroy(&profiling.profiler)
+		backing := make([]u8, spall.BUFFER_DEFAULT_SIZE)
+		defer delete(backing)
+
+		profiling.prof_buffer = spall.buffer_create(backing, u32(sync.current_thread_id()))
+		defer spall.buffer_destroy(&profiling.profiler, &profiling.prof_buffer)
+	}
+	// imgui init
+	imgui.CreateContext()
+	defer imgui.DestroyContext()
+
+	imgui_rl.init()
+	defer imgui_rl.shutdown()
 	// raylib window init
 	rl.InitWindow(sim.World_Width * sim.Scale, sim.World_Height * sim.Scale, "sandfall")
 	rl.SetTargetFPS(120)
@@ -27,11 +36,11 @@ main :: proc() {
 	rl.UnloadImage(image)
 	defer rl.UnloadTexture(texture)
 
-	// create instance session
-
+	// create game instance 
 	instance: game.Game
 	game.create_game(&instance)
 	defer game.delete_game(&instance)
+
 	world := &instance.world
 	events := &instance.events
 	pixel_buf := instance.pixel_buf
@@ -43,7 +52,7 @@ main :: proc() {
 	acc: f64 = 0
 
 	for !rl.WindowShouldClose() {
-
+	    
 		now := rl.GetTime()
 		dt := now - prev
 		acc += dt * TS[config.time_scale]
@@ -63,6 +72,7 @@ main :: proc() {
 		game.keyboard_handler(&instance)
 
 		for acc >= sim.Dt {
+    		clear(&world.movement)
 			game.event_listener(world, events)
 			sim.update_grid(world)
 			sim.update_particles(&world.particles)
@@ -75,20 +85,27 @@ main :: proc() {
 		} else {
 			rl.UpdateTexture(texture, raw_data(world.color))
 		}
+		imgui_rl.process_events()
+		imgui_rl.new_frame()
+		imgui.NewFrame()
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
-		game.render_particles(world.particles)
-
+		// game.render_particles(world.particles)
+		
 		if config.show_chunk_border {
 			game.render_debug_chunk(world)
+			for p in world.movement {
+				np := sim.Scale * p
+				rl.DrawLine(i32(np.x)+2, i32(np.y)+2, i32(np.z)+2, i32(np.w)+2, rl.PINK)
+			}
 		}
 
 		if instance.debug_ui.show {
 			game.draw_ui(&instance)
 			rl.DrawFPS(100, 20)
 		}
-
+		
 		if instance.debug_ui.float_uis.show {
 			game.material_list_selector(
 				config,
@@ -96,8 +113,10 @@ main :: proc() {
 				instance.debug_ui.float_uis.bound,
 			)
 		}
-
 		game.render_tool(config, &instance.mouse)
+		imgui.ShowDemoWindow()
+		imgui.Render()
+		imgui_rl.render_draw_data(imgui.GetDrawData())
 		rl.EndDrawing()
 	}
 }
@@ -108,4 +127,3 @@ on_window_resize :: proc() {
 		rl.SetWindowSize(rl.GetRenderWidth(), rl.GetRenderHeight())
 	}
 }
-

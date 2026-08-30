@@ -21,7 +21,7 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) 
 			continue
 		}
 		world.side[now] = side
-		activate_chunk(world, to_chunk_pos(World_Pos{ x + side, y + 1 }), { x + side, y+1 })
+		activate_chunk(world, to_chunk_pos(World_Pos{x + side, y + 1}), {x + side, y + 1})
 		vx[next] = vx[now] * config.friction
 		vy[next] = vy[now] * config.friction
 		if check, ok := world_index(x, y + 1); ok && is_solid(world, check) {
@@ -34,6 +34,7 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) 
 		} else {
 			move_cell(world, next, now)
 		}
+		append(&world.movement, [4]int{x, y, x + side, y + 1})
 		return true
 	}
 	return false
@@ -60,7 +61,7 @@ powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		}
 		return false
 	}
-	activate_chunk(world, to_chunk_pos(World_Pos{ x + side, y }), { x+side, y })
+	activate_chunk(world, to_chunk_pos(World_Pos{x + side, y}), {x + side, y})
 	vx[next] = vx[now] * config.friction
 	if is_liquid(grid, next) {
 		vx[next] *= config.damp
@@ -68,6 +69,7 @@ powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	} else {
 		move_cell(world, next, now)
 	}
+	append(&world.movement, [4]int{x, y, x + side, y})
 	return true
 }
 
@@ -108,18 +110,18 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		to := idx(x, to_y)
 		vx[to] = vx[now]
 		vy[to] = vy[now]
-		activate_chunk(world, to_chunk_pos(World_Pos{ x, to_y }), { x , to_y })
+		activate_chunk(world, to_chunk_pos(World_Pos{x, to_y}), {x, to_y})
 		if !through_liquid {
 			get_friction := false
 			if left, inside := world_index(x - 1, to_y); inside && is_solid(world, left) {
 				vx[left] += vy[now] * config.fall_drag
-				activate_chunk(world, to_chunk_pos(World_Pos{x - 1, to_y}), { x , to_y })
+				activate_chunk(world, to_chunk_pos(World_Pos{x - 1, to_y}), {x, to_y})
 				world.side[left] = world.side[now]
 				get_friction = true
 			}
 			if right, inside := world_index(x + 1, to_y); inside && is_solid(world, right) {
 				vx[right] += vy[now] * config.fall_drag
-				activate_chunk(world, to_chunk_pos(World_Pos{x + 1, to_y}), {x+1, to_y})
+				activate_chunk(world, to_chunk_pos(World_Pos{x + 1, to_y}), {x + 1, to_y})
 				world.side[right] = world.side[now]
 				get_friction = true
 			}
@@ -128,9 +130,8 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		} else {
 			swap_cell(world, to, now)
 		}
+		append(&world.movement, [4]int{x, y, x, to_y})
 		return true
 	}
 	return false
 }
-
-
