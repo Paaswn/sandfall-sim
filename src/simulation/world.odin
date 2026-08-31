@@ -222,7 +222,7 @@ update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int)  {
 					activate_chunk(world, Chunk_Pos{ cx, cy - 1 }, { x, y - 1 })
 				}
 				if lx == 0 {
-					activate_chunk(world, Chunk_Pos{ cx - 1, cy }, { x - 1, y })
+					activate_chunk(world, Chunk_Pos{ cx - 1, cy }, { x - 2, y })
 				}
 				if lx == Chunk_Size - 1 {
 					activate_chunk(world, Chunk_Pos{cx + 1, cy}, { x + 1, y })

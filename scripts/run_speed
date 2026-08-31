@@ -1,4 +1,4 @@
 #!/bin/bash
 
 python3.14 scripts/generate_material.py
-odin build ./src -o:speed -out:sandfall && ./sandfall
+odin build ./src -o:speed -out:.out/sandfall-speed && .out/sandfall-speed

@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Run Minimal Build",
+    "command": "./scripts/run_minimal"
+  },
+  {
+    "label": "Run Release Build",
+    "command": "./scripts/run_speed"
+  },
+  {
+    "label": "Run Profiler Build",
+    "command": "./scripts/run_profile_speed"
+  },
+  {
+    "label": "Build Debug",
+    "command": "./scripts/build_debug"
+  }
+]

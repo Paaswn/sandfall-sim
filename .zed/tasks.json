@@ -1,14 +1,18 @@
 [
   {
     "label": "Run Debug Build",
-    "command": "./scripts/run_debug",
+    "command": "./scripts/run_debug"
   },
   {
     "label": "Run Released Build",
-    "command": "./scripts/run_speed",
+    "command": "./scripts/run_speed"
   },
   {
     "label": "Run Profiler Build",
-    "command": "./scripts/run_profile_speed",
+    "command": "./scripts/run_profile_speed"
   },
+  {
+    "label": "Compile Debug-No-Optimized",
+    "command": "./scripts/compile_no_opt"
+  }
 ]

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+python3.14 scripts/generate_material.py
+odin build ./src -o:minimal -out:.out/sandfall-minimal && .out/sandfall-minimal
