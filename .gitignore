@@ -1,7 +1,4 @@
 .out
 perf*
-sandfall
-src.bin
-src/src
 .log
 vendor
