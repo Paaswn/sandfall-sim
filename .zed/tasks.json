@@ -1,10 +1,10 @@
 [
   {
-    "label": "Run Debug Build",
-    "command": "./scripts/run_debug"
+    "label": "Run Minimal Build",
+    "command": "./scripts/run_minimal"
   },
   {
-    "label": "Run Released Build",
+    "label": "Run Release Build",
     "command": "./scripts/run_speed"
   },
   {
@@ -12,7 +12,7 @@
     "command": "./scripts/run_profile_speed"
   },
   {
-    "label": "Compile Debug-No-Optimized",
-    "command": "./scripts/compile_no_opt"
+    "label": "Build Debug",
+    "command": "./scripts/build_debug"
   }
 ]

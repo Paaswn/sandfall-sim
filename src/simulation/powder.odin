@@ -116,7 +116,7 @@ powder_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 			get_friction := false
 			if left, inside := world_index(x - 1, to_y); inside && is_solid(world, left) {
 				vx[left] += vy[now] * config.fall_drag
-				activate_chunk(world, to_chunk_pos(World_Pos{x - 1, to_y}), {x, to_y})
+				activate_chunk(world, to_chunk_pos(World_Pos{x - 1, to_y}), {x - 1, to_y})
 				world.side[left] = world.side[now]
 				get_friction = true
 			}
