@@ -63,6 +63,7 @@ powder_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	}
 	activate_chunk(world, to_chunk_pos(World_Pos{x + side, y}), {x + side, y})
 	vx[next] = vx[now] * config.friction
+	vy[next] = vy[now]
 	if is_liquid(grid, next) {
 		vx[next] *= config.damp
 		swap_cell(world, next, now)

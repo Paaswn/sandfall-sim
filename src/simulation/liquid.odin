@@ -130,7 +130,6 @@ liquid_move :: proc(world: ^World, config: Material_Config, x0, y0: int) -> bool
 	to_y := y0
 	to := now
 	if i, ok := world_index(x0+side, y0); !ok || is_solid(world, i) do return false
-	if i, ok := world_index(x0+side, y0); !ok || is_solid(world, i) do return false
 	for {
     	i := world_index(to_x, to_y) or_break
         if i != now {
@@ -157,16 +156,17 @@ liquid_move :: proc(world: ^World, config: Material_Config, x0, y0: int) -> bool
 			to_y += sy
 		}
 	}
-	moved := ( to_x != x0 || to_y != y0 ) && (to != now)
+	moved := to != now
 	moved or_return
-	if rand.float32() < 0.1 {
-	    world.side[now] *= -1
-	}
+	pos := to_world_pos(to)
+	// if rand.float32() < 0.1 {
+	//     world.side[now] *= -1
+	// }
 	vx[to] = vx[now]
 	vy[to] = vy[now]
 	move_cell(world, to, now)
-	activate_chunk(world, to_chunk_pos(World_Pos{ to_x, to_y }), { to_x, to_y })
-	append(&world.movement, [4]int{x0, y0, to_x, to_y})
+	activate_chunk(world, to_chunk_pos(pos), pos)
+	append(&world.movement, [4]int{x0, y0, pos.x, pos.y})
 	return true
 }
 @(private = "file")

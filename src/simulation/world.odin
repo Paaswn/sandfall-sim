@@ -1,11 +1,9 @@
 package simulation
 
 import "../profiling"
-import "core:fmt"
-import "core:math"
+import "core:log"
 import "core:math/rand"
 import "core:prof/spall"
-import "core:strings"
 import rl "vendor:raylib"
 
 World :: struct {
@@ -39,7 +37,7 @@ create_world :: proc(world: ^World) {
 	world.side = make([]int, World_Size)
 	world.particles = make([dynamic]Particle, 0, 128)
 	world.config = load_world_config(Config_Path)
-	world.movement = make([dynamic][4]int, 0, World_Size) 
+	world.movement = make([dynamic][4]int, 0, World_Size)
 }
 
 delete_world :: proc(world: ^World) {
@@ -106,10 +104,11 @@ circle_brush_spawn :: proc(world: ^World, o: World_Pos, r: int, material: Materi
 	}
 }
 
+// spawn material is called before world update
 spawn_material :: proc(world: ^World, material: Material, pos: World_Pos) {
 	@(static) total_spawn: u64 = 0
 	i := idx(pos.x, pos.y)
-	if world.grid[i] == material do return
+	if world.grid[i] == material && material != .Empty do return
 	world.updated[i] = world.tick - 1
 	cpos := to_chunk_pos(pos)
 	chunk := get_chunk(world.chunks, cpos)
@@ -119,7 +118,7 @@ spawn_material :: proc(world: ^World, material: Material, pos: World_Pos) {
 		world.side[i] = random_side()
 	}
 	world.vel_x[i] = 0
-	world.vel_y[i] = 2
+	world.vel_y[i] = 1
 	world.grid[i] = material
 	world.color[i] = get_material_color(material, pos, total_spawn)
 	total_spawn += 1
@@ -171,32 +170,25 @@ update_grid :: proc(world: ^World) {
 			if chunk_active(c, world.tick) {
 				update_region(world, c, x, y)
 			} else {
-				c.active_bound = nil
+				c.next_bound = nil
 			}
 		}
 	}
-	// #reverse for &c, i in c_man.chunks {
-	// 	if chunk_active(&c, world.tick) {
-	// 		loop_through_region(world, i)
-	// 	}
-	// }
 }
 
 
 update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int)  {
-    updated := false
-	bound, ok := chunk.active_bound.?
-	if world.tick - chunk.last_bound_reset >= max(u32) || !ok {
-		chunk.active_bound = nil
-		chunk.last_bound_reset = world.tick
+	when profiling.PROFILE {
+		spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
 	}
+    updated := false
+	bound, ok := chunk.next_bound.?
+	chunk.next_bound = nil
 	min_y := bound.y
 	for ly := bound.y2; ly >= min_y; ly -= 1 {
-	    if ly >= Chunk_Size do continue
-		start_lx, end_lx, step_lx := bound.x, min( bound.x2+1, Chunk_Size), 1
+		start_lx, end_lx, step_lx := bound.x, bound.x2 + 1, 1
 		if world.tick % 2 != 0 {
-			// local X v
-			start_lx = min( bound.x2, Chunk_Size-1 )
+			start_lx = bound.x2
 			end_lx = bound.x - 1
 			step_lx = -1
 		}
@@ -210,9 +202,9 @@ update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int)  {
 				continue
 			}
 
-			if update_cell_vertical(world, x, y) || update_cell_side(world, x, y) {
+			if update_cell(world, x, y){
+				activate_chunk(world, chunk, pos)
 				updated = true
-				// after := world.grid[i]
 				if ly == min_y {
 					new_y := max(ly - 1, 0)
 					update_bound(chunk, Local_Pos{ lx, new_y })
@@ -222,7 +214,7 @@ update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int)  {
 					activate_chunk(world, Chunk_Pos{ cx, cy - 1 }, { x, y - 1 })
 				}
 				if lx == 0 {
-					activate_chunk(world, Chunk_Pos{ cx - 1, cy }, { x - 2, y })
+					activate_chunk(world, Chunk_Pos{ cx - 1, cy }, { x - 1, y })
 				}
 				if lx == Chunk_Size - 1 {
 					activate_chunk(world, Chunk_Pos{cx + 1, cy}, { x + 1, y })
@@ -244,13 +236,10 @@ Update_Context :: struct {
 prepare_cell_update :: proc(world: ^World, x, y: int) -> (ctx: Update_Context, ok: bool) {
 	now := idx(x, y) // always in border no need to check
 	if world.tick == world.updated[now] do return {}, false
-	vx := world.vel_x
-	vy := world.vel_y
-	grid := world.grid
-	config := world.config[grid[now]]
-	if is_empty(grid, now) || is_hard(grid, now) {
-		vx[now] = 0
-		vy[now] = 0
+	config := world.config[world.grid[now]]
+	if is_empty(world.grid, now) || is_hard(world.grid, now) {
+		world.vel_x[now] = 0
+		world.vel_y[now] = 0
 		return {}, false
 	}
 	if is_dead(world, x, y) {
@@ -273,7 +262,7 @@ apply_gravity :: proc(
 	// vx[now] = rl.Clamp(vx[now], 0, mat_type_config.Max_Vx)
 }
 
-update_cell_vertical :: proc(world: ^World, x, y: int) -> bool {
+update_cell :: proc(world: ^World, x, y: int) -> bool {
 	if ctx, ok := prepare_cell_update(world, x, y); ok {
 		now := ctx.now
 		config := ctx.config
@@ -281,25 +270,12 @@ update_cell_vertical :: proc(world: ^World, x, y: int) -> bool {
 		#partial switch mat_type {
 		case .Powder:
 			apply_gravity(world, config, Powder, now)
-			return powder_move_down(world, config, x, y)
-		case .Liquid:
-			apply_gravity(world, config, Liquid, now)
-			return liquid_move(world, config, x, y)
-		}
-	}
-	return false
-}
-
-update_cell_side :: proc(world: ^World, x, y: int) -> bool {
-	if ctx, ok := prepare_cell_update(world, x, y); ok {
-		now := ctx.now
-		config := ctx.config
-		mat_type := ctx.mat_type
-		#partial switch mat_type {
-		case .Powder:
+			if powder_move_down(world, config, x, y) do return true
 			if powder_move_diagonal(world, config, x, y) do return true
 			if powder_move_side(world, config, x, y) do return true
 		case .Liquid:
+			apply_gravity(world, config, Liquid, now)
+			if liquid_move(world, config, x, y) do return true
 			if liquid_move_diagonal(world, config, x, y) do return true
 			if liquid_move_side(world, config, x, y) do return true
 		}

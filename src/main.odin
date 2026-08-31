@@ -10,6 +10,8 @@ import "game"
 import "profiling"
 import sim "simulation"
 import rl "vendor:raylib"
+// import imgui "../vendor/odin-imgui"
+// import imgui_rl "../vendor/imgui_impl_raylib"
 
 main :: proc() {
 	// handle, err := os.open(
@@ -80,17 +82,16 @@ main :: proc() {
 		} else {
 			game.mouse_handler(&instance)
 		}
-
-		now := rl.GetTime()
 		game.keyboard_handler(&instance)
+		now := rl.GetTime()
 		if debugger.on && debugger.len >= game.Debugger_Size {
     		world = game.current_debug_frame(debugger)
     		if debugger.process_next_frame {
     			world = &instance.world
-    			game.dispatch_event(world, events)
     			clear(&world.movement)
     			world.tick += 1
     			sim.update_grid(world)
+    			game.dispatch_event(world, events)
     			game.copy_to_frame(debugger, world)
     			game.forward_frame(debugger)
     			debugger.process_next_frame = false
@@ -100,9 +101,9 @@ main :: proc() {
     		acc += dt * TS[config.time_scale]
 			for acc >= sim.Dt {
 				world = &instance.world
-				game.dispatch_event(world, events)
 				clear(&world.movement)
 				sim.update_grid(world)
+				game.dispatch_event(world, events)
 				if debugger.on {
 					game.copy_to_frame(debugger, world)
 				} else {
@@ -113,7 +114,6 @@ main :: proc() {
 					world.tick += 1
 				}
 				acc -= sim.Dt
-
 			}
 		}
 		prev = now
@@ -138,6 +138,12 @@ main :: proc() {
 			}
 		}
 
+		for i: i32 = 0; i <= sim.World_Height; i += sim.Chunk_Size {
+			rl.DrawLine(0, i*sim.Scale, sim.World_Width*sim.Scale, i*sim.Scale, {255, 255, 255, 89})
+		}
+		for i: i32 = 0; i <= sim.World_Width; i += sim.Chunk_Size {
+			rl.DrawLine(i*sim.Scale, 0, i*sim.Scale, sim.World_Height*sim.Scale, {255, 255, 255, 89})
+		}
 		if config.show_chunk_border {
 			game.render_debug_chunk(world)
 		}

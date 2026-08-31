@@ -52,7 +52,7 @@ render_debug_chunk :: proc(world: ^sim.World) {
 	for &chunk, i in world.chunks {
 		if sim.chunk_active(&chunk, world.tick) {
 			S :: sim.Scale
-			bound, ok := chunk.active_bound.?
+			bound, ok := chunk.next_bound.?
 			cp := sim.to_chunk_pos(i)
 			pos := sim.to_world_pos(cp, {0, 0})
 			color := rl.GREEN
@@ -66,23 +66,17 @@ render_debug_chunk :: proc(world: ^sim.World) {
 			)
 			// if !ok do continue
 			// CS := sim.Chunk_Size
-			i := world.tick - chunk.last_bound_reset
 			j := world.tick - chunk.last_updated_tick
 			to_reset: cstring
 			chunk_age: cstring
-			if i >= len(num) {
-				to_reset = fmt.ctprint(i)
-			} else {
-				to_reset = num[i]
-			}
 			if j >= len(num) {
 				chunk_age = fmt.ctprint(j)
 			} else {
 				chunk_age = num[j]
 			}
 			rl.DrawText(
-				fmt.ctprint(to_reset, chunk_age),
-				i32((pos.x + sim.Chunk_Size / 2) * S - 20),
+				fmt.ctprint(chunk_age),
+				i32((pos.x + sim.Chunk_Size / 2) * S),
 				i32((pos.y + sim.Chunk_Size / 2) * S),
 				20,
 				rl.WHITE,
@@ -95,8 +89,8 @@ render_debug_chunk :: proc(world: ^sim.World) {
 			rl.DrawRectangleLines(
 				i32(x * S),
 				i32(y * S),
-				i32((x2 - x) * S),
-				i32((y2 - y) * S),
+				i32((x2 - x + 1)  * S),
+				i32((y2 - y + 1) * S),
 				rl.RED,
 			)
 		}
