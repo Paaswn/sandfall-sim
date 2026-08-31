@@ -109,6 +109,7 @@ copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
 	// copy current world to frame
 	frame.tick = world.tick
 	frame.config = world.config
+	resize(&frame.movement, len(world.movement))
 	copy(frame.movement[:], world.movement[:])
 	copy(frame.chunks, world.chunks)
 	copy(frame.color, world.color)

@@ -30,16 +30,16 @@ World_Config :: [Material]Material_Config
 
 create_world :: proc(world: ^World) {
 	world.tick = 0
-	world.vel_x = make([]f32, World_Width * World_Height)
-	world.vel_y = make([]f32, World_Width * World_Height)
-	world.grid = make([]Material, World_Width * World_Height)
-	world.color = make([]rl.Color, World_Width * World_Height)
+	world.vel_x = make([]f32, World_Size)
+	world.vel_y = make([]f32, World_Size)
+	world.grid = make([]Material, World_Size)
+	world.color = make([]rl.Color, World_Size)
 	world.chunks = make([]Chunk, Width_In_Chunk * Height_In_Chunk)
-	world.updated = make([]u32, World_Width * World_Height)
-	world.side = make([]int, World_Width * World_Height)
-	world.particles = make([dynamic]Particle, 128)
+	world.updated = make([]u32, World_Size)
+	world.side = make([]int, World_Size)
+	world.particles = make([dynamic]Particle, 0, 128)
 	world.config = load_world_config(Config_Path)
-	world.movement = make([dynamic][4]int, World_Size) 
+	world.movement = make([dynamic][4]int, 0, World_Size) 
 }
 
 delete_world :: proc(world: ^World) {
@@ -186,7 +186,7 @@ update_grid :: proc(world: ^World) {
 update_region :: proc(world: ^World, chunk: ^Chunk, cx, cy: int)  {
     updated := false
 	bound, ok := chunk.active_bound.?
-	if world.tick - chunk.last_bound_reset >= 8 || !ok {
+	if world.tick - chunk.last_bound_reset >= max(u32) || !ok {
 		chunk.active_bound = nil
 		chunk.last_bound_reset = world.tick
 	}
@@ -284,7 +284,6 @@ update_cell_vertical :: proc(world: ^World, x, y: int) -> bool {
 			return powder_move_down(world, config, x, y)
 		case .Liquid:
 			apply_gravity(world, config, Liquid, now)
-			// liquid_move_down(world, config, x, y) or_return
 			return liquid_move(world, config, x, y)
 		}
 	}
