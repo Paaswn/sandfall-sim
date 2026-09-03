@@ -211,11 +211,6 @@ update_region :: proc(world: ^World, uctx: ^Update_Context)  {
 	}
 }
 
-Prepare_Result :: struct {
-	mat_type: Material_Type,
-	now:      int,
-	config:   Material_Config,
-}
 
 update_cell :: proc(world: ^World, uctx: ^Update_Context) -> bool {
 	now := uctx.now
@@ -227,7 +222,6 @@ update_cell :: proc(world: ^World, uctx: ^Update_Context) -> bool {
 		return false
 	}
 	if is_dead(world, uctx.wpos) {
-		log.info("yay")
 		// vy[now] *= config.damp
 		return false // skip possible dead cell
 	}
@@ -293,4 +287,9 @@ random_side :: proc() -> int {
 
 tick_from_sec :: proc(sec: f32) -> u32 {
 	return u32(sec * 60)
+}
+
+material_at :: proc(world: ^World, i: int) -> Material {
+    assert(i < World_Size && i >= 0)
+    return world.grid[i]
 }

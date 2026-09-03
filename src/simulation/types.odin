@@ -20,8 +20,8 @@ World :: struct {
 Update_Context :: struct {
 	chunk: ^Chunk,
 	now: int,
-	wpos: World_Pos,
 	cpos: Chunk_Pos,
+	wpos: World_Pos,
 	lpos: Local_Pos
 }
 

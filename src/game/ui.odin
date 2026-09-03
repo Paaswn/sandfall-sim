@@ -34,9 +34,7 @@ create_ui :: proc() -> Ui_Manager {
 	material_choices, ok := strings.join(reflect.enum_field_names(Material), ";")
 	cmaterial_choices := strings.clone_to_cstring(material_choices)
 	delete(material_choices)
-	if ok != .None {
-		panic("fahh")
-	}
+	assert(ok == nil)
 	return Ui_Manager {
 		false,
 		{{0, 0, 200, 100 }, false },

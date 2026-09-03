@@ -4,16 +4,6 @@ import "core:prof/spall"
 import "core:math"
 import "../profiling"
 
-// bound is always a local coordinate of a chunk
-
-Chunk_Manager :: struct {
-	// index of active odd chunk
-	active_white_chunk: [dynamic]int,
-	// index of active even chunk
-	active_red_chunk:   [dynamic]int,
-	chunks:             []Chunk,
-}
-
 update_bound :: proc {
 	update_bound_world,
 	update_bound_local,
@@ -61,12 +51,6 @@ resize_bound_local :: proc(bound: ^Bound, pos: Local_Pos) {
 	bound.y = clamp(pos.y - Bound_Padding, 0, bound.y)
 	bound.x2 = clamp(pos.x + Bound_Padding, bound.x2, Chunk_Size-1)
 	bound.y2 = clamp(pos.y + Bound_Padding, bound.y2, Chunk_Size-1)
-}
-
-delete_chunk_manager :: proc(manager: ^Chunk_Manager) {
-	delete(manager.active_red_chunk)
-	delete(manager.active_white_chunk)
-	delete(manager.chunks)
 }
 
 to_chunk_index :: proc {
@@ -156,9 +140,8 @@ put_chunk_in_queue_chunk :: proc(world: ^World, chunk: ^Chunk, pos: World_Pos) {
 
 @(private = "file")
 put_chunk_in_queue_idx :: proc(world: ^World, cpos: Chunk_Pos, wpos: World_Pos) {
-	cx := math.clamp(cpos.x, 0, Width_In_Chunk - 1)
-	cy := math.clamp(cpos.y, 0, Height_In_Chunk - 1)
-	chunk := get_chunk(world.chunks, Chunk_Pos{cx, cy})
+    if is_chunk_outside(cpos) do return
+	chunk := get_chunk(world.chunks, cpos)
 	// chunk.to_update_tick = world.tick + 1
 	chunk.last_updated_tick = world.tick
 	update_bound(chunk, wpos)
@@ -169,10 +152,13 @@ chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
 	if chunk.last_updated_tick == 0 do return false // this acts like^ initially all chunk.active feild with false
 	return tick - chunk.last_updated_tick <= Material_Awake_Threshold // force chunk update if last_updated tick is less than 5 anyway
 }
+
 mark_dirty :: proc {
 	mark_dirty_context,
 	mark_chunk_dirty
 }
+
+@(private="file")
 mark_dirty_context :: proc(world: ^World, uctx: Update_Context) {
 	activate_chunk(world.tick, uctx)
 	if uctx.lpos.y == 0 {
@@ -185,9 +171,8 @@ mark_dirty_context :: proc(world: ^World, uctx: Update_Context) {
 		activate_chunk(world, uctx.cpos + {1, 0}, uctx.wpos + {1, 0})
 	}
 }
-to_local_pos :: proc(wpos: World_Pos) -> Local_Pos {
-	return Local_Pos(wpos) % Chunk_Size
-}
+
+@(private="file")
 mark_chunk_dirty :: proc(world: ^World, wpos: World_Pos) {
 	cpos := to_chunk_pos(wpos)
 	activate_chunk(world, cpos, wpos)
@@ -201,4 +186,8 @@ mark_chunk_dirty :: proc(world: ^World, wpos: World_Pos) {
 	if lpos.x == Chunk_Size - 1 {
 		activate_chunk(world, cpos + {1, 0}, wpos + {1, 0})
 	}
+}
+
+to_local_pos :: proc(wpos: World_Pos) -> Local_Pos {
+	return Local_Pos(wpos) % Chunk_Size
 }
