@@ -4,11 +4,13 @@ import "core:fmt"
 import "core:math"
 import "core:math/rand"
 
-liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+liquid_move_down :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
-	now := idx(x, y)
+	now := uctx.now
+	x := uctx.wpos.x;
+	y := uctx.wpos.y;
 	if i, ok := world_index(x, y + 1); !ok || !is_empty(grid, i) do return false
 	if vy[now] < Liquid.Vy_Thresh do return false
 	step := int(math.clamp(vy[now], 1, Liquid.Max_Vy))
@@ -42,15 +44,17 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		// 	vx[now] *= config.friction
 		// }
 
-		activate_chunk(world, to_chunk_pos(World_Pos{ x, to_y }), { x, to_y })
+		mark_dirty(world, World_Pos{ x, to_y })
 		move_cell(world, to, now)
 		return true
 	}
 	return false
 }
-liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
 	grid := world.grid
-	now := idx(x, y)
+	now := uctx.now
+	x := uctx.wpos.x;
+	y := uctx.wpos.y;
 	vx := world.vel_x
 	vy := world.vel_y
 	step := int(math.clamp(vx[now], 0, Liquid.Max_Vx))
@@ -82,7 +86,7 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 		is_empty(grid, to) or_return
 		vx[to] = vx[now]
 		vy[to] = vy[now]
-		activate_chunk(world, to_chunk_pos(World_Pos{ to_x, y }), { to_x, y })
+		mark_dirty(world, World_Pos{ to_x, y })
 		move_cell(world, to, now)
 		append(&world.movement, [4]int{x, y, to_x, y})
 		return true
@@ -90,9 +94,11 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, x, y: int) -> b
 	return false
 }
 
-liquid_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) -> bool {
+liquid_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
 	grid := world.grid
-	now := idx(x, y)
+	now := uctx.now
+	x := uctx.wpos.x;
+	y := uctx.wpos.y;
 	vx := world.vel_x
 	vy := world.vel_y
 	side := world.side[now]
@@ -103,12 +109,14 @@ liquid_move_diagonal :: proc(world: ^World, config: Material_Config, x, y: int) 
 	is_empty(grid, to) or_return
 	vx[to] = vx[now]
 	vy[to] = vy[now]
-	activate_chunk(world, to_chunk_pos(World_Pos{ x + side, y + 1 }), { x + side, y + 1 })
+	mark_dirty(world, World_Pos{ x + side, y + 1 })
 	move_cell(world, to, now)
 	return true
 }
-liquid_move :: proc(world: ^World, config: Material_Config, x0, y0: int) -> bool {
-	now := idx(x0, y0)
+liquid_move :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+	now := uctx.now
+	x0 := uctx.wpos.x;
+	y0 := uctx.wpos.y;
 	vx := world.vel_x
 	vy := world.vel_y
 	side := world.side[now]
