@@ -143,8 +143,8 @@ activate_chunk :: proc {
 }
 
 @(private = "file")
-put_chunk_in_queue_context :: proc(uctx: Update_Context) {
-	uctx.chunk.last_updated_tick = uctx.tick
+put_chunk_in_queue_context :: proc(tick: u32, uctx: Update_Context) {
+	uctx.chunk.last_updated_tick = tick
 	update_bound(uctx.chunk, uctx.lpos)
 }
 @(private = "file")
@@ -174,7 +174,7 @@ mark_dirty :: proc {
 	mark_chunk_dirty
 }
 mark_dirty_context :: proc(world: ^World, uctx: Update_Context) {
-	activate_chunk(uctx)
+	activate_chunk(world.tick, uctx)
 	if uctx.lpos.y == 0 {
 		activate_chunk(world, uctx.cpos - {0, 1}, uctx.wpos - {0, 1})
 	}

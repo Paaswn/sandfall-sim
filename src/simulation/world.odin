@@ -99,7 +99,7 @@ circle_brush_spawn :: proc(world: ^World, o: World_Pos, r: int, material: Materi
 */ 
 spawn_material :: proc(world: ^World, material: Material, pos: World_Pos) {
 	@(static) total_spawn: u64 = 0
-	i := idx(pos.x, pos.y)
+	i := idx(pos)
 	if world.grid[i] == material && material != .Empty do return
 	world.updated[i] = world.tick
 	cpos := to_chunk_pos(pos)
@@ -164,9 +164,8 @@ update_grid :: proc(world: ^World) {
 		for x := start_x; x != end_x; x += step_x {
 			c := get_chunk(world.chunks, Chunk_Pos{ x, y })
 			if chunk_active(c, world.tick) {
-				update_context := Update_Context{world.tick, c, 0, {x,y}, {}, {} }
+				update_context := Update_Context{c, 0, {x,y}, {}, {} }
 				update_region(world, &update_context)
-				// update_region(world, c, x, y)
 			} else {
 				c.next_bound = nil
 			}
@@ -192,7 +191,6 @@ update_region :: proc(world: ^World, uctx: ^Update_Context)  {
 		for lx := start_lx; lx != end_lx; lx += step_lx {
 			lpos := Local_Pos{lx , ly}
 			pos := to_world_pos(uctx.cpos, lpos)
-			x, y := pos.x, pos.y
 			if is_outside(pos) do continue
 			uctx.now = idx(pos)
 			uctx.lpos = lpos
@@ -206,7 +204,7 @@ update_region :: proc(world: ^World, uctx: ^Update_Context)  {
 					update_bound(uctx.chunk, Local_Pos{lx, new_y})
 					min_y = new_y
 				}
-			} else if chunk_active(uctx.chunk, uctx.tick) && world.grid[uctx.now] != .Empty {
+			} else if chunk_active(uctx.chunk, world.tick) && world.grid[uctx.now] != .Empty {
 				update_bound(uctx.chunk, uctx.lpos)
 			}
 		}
@@ -229,6 +227,7 @@ update_cell :: proc(world: ^World, uctx: ^Update_Context) -> bool {
 		return false
 	}
 	if is_dead(world, uctx.wpos) {
+		log.info("yay")
 		// vy[now] *= config.damp
 		return false // skip possible dead cell
 	}

@@ -1,6 +1,7 @@
 package simulation
 
 import rl "vendor:raylib"
+import "core:math/fixed"
 
 World :: struct {
 	tick:      u32,
@@ -17,7 +18,6 @@ World :: struct {
 }
 
 Update_Context :: struct {
-	tick: u32,
 	chunk: ^Chunk,
 	now: int,
 	wpos: World_Pos,
@@ -75,4 +75,26 @@ Material_Config :: struct {
 	impact_thresh:  f32,
 	slide_drag:     f32,
 	fall_drag:      f32,
+}
+
+Velocity :: distinct fixed.Fixed(i16, 6)
+Material_ID :: distinct u16
+/*
+	cell ( used to be enum named Material ) currently have
+
+	ID
+	
+	VARIANCE *of color*
+
+	SIDE
+
+	ACTIVE
+
+	TEMPERATURE *tbd*
+*/
+Cell :: bit_field u32 {
+	id: Material_ID | 16,
+	variance : u8 | 4,
+	side: i8 | 2,
+	active: bool | 1,
 }
