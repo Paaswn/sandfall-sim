@@ -60,6 +60,7 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 	step := int(math.clamp(vx[now], 0, Liquid.Max_Vx))
 	side := world.side[now]
 	to_x := x
+	first_valid_x := -1
 	for s := 1 ;s <= step; s += 1 {
 		next_x := x + s * world.side[now]
 		if is_outside(next_x, y) {
@@ -68,6 +69,10 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 		}
 		next := idx(next_x, y)
 		if !is_empty(grid, next) {
+			if is_liquid( grid, next) && s != step {
+				if first_valid_x == -1 do first_valid_x = to_x
+				continue
+			}
 			check := idx(x - side, y)
 			if i, ok := world_index(x - side, y); ok && is_empty(grid, i) {
 				world.side[now] *= -1
@@ -80,6 +85,9 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 		}
 		to_x = next_x
 		// if !is_outside(next_x, y + 1) && is_empty(grid, idx(next_x, y + 1)) do break
+	}
+	if first_valid_x != -1 && !is_empty(grid, idx( to_x, y )) {
+		to_x = first_valid_x
 	}
 	if to_x != x {
 		to := idx(to_x, y)

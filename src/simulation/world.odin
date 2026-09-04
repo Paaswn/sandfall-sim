@@ -100,7 +100,7 @@ circle_brush_spawn :: proc(world: ^World, o: World_Pos, r: int, material: Materi
 spawn_material :: proc(world: ^World, material: Material, pos: World_Pos) {
 	@(static) total_spawn: u64 = 0
 	i := idx(pos)
-	if world.grid[i] == material && material != .Empty do return
+	if world.grid[i] == material do return
 	world.updated[i] = world.tick
 	cpos := to_chunk_pos(pos)
 	chunk := get_chunk(world.chunks, cpos)
