@@ -40,7 +40,10 @@ Material_Type :: enum u8 {
 	Powder, // move with thresh
 	Hard, // static material that can't be damaged by any game object
 	Semi_Hard, // static material that can be slightly damaged by game object
+	Empty
 }
+
+Mat_Types :: bit_set[Material_Type]
 
 Debug :: enum {
 	Off,

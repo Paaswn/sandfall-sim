@@ -6,7 +6,7 @@ import "core:math"
 import rl "vendor:raylib"
 
 // randomly move down-left or down-right, will try to transfer some velocity to its below cell on a success tick
-powder_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+powder_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	grid := world.grid
 	vx := world.vel_x
 	vy := world.vel_y
@@ -30,7 +30,7 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: ^Upda
 			vx[check] += math.max(vx[now], vy[now]) * config.slide_drag
 			world.side[check] = world.side[now]
 		}
-		if is_liquid(grid, next) {
+		if is_liquid(world, next) {
 			vx[next] *= config.friction
 			swap_cell(world, next, now)
 		} else {
@@ -42,8 +42,15 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: ^Upda
 	return false
 }
 
+get_material_config :: proc(world: ^World, i: int) -> Material_Config {
+    return world.config[world.grid[i]]
+}
+
+get_material_type :: proc(world: ^World, i:int) -> Material_Type {
+    return world.config[world.grid[i]].type
+}
 // randomly move left or right, will try to transfer some velocity to the obstacle on a failed tick
-powder_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+powder_move_side :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
@@ -68,7 +75,7 @@ powder_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 	mark_dirty(world, World_Pos{x + side, y})
 	vx[next] = vx[now] * config.friction
 	vy[next] = vy[now]
-	if is_liquid(grid, next) {
+	if is_liquid(world, next) {
 		vx[next] *= config.damp
 		swap_cell(world, next, now)
 	} else {
@@ -79,7 +86,7 @@ powder_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 }
 
 // move down based on vy value, will transfer some velocity to left-and-right cell
-powder_move_down :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+powder_move_down :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
@@ -103,7 +110,7 @@ powder_move_down :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 			vy[now] *= config.damp
 			break
 		}
-		if ok && is_liquid(grid, next) {
+		if ok && is_liquid(world, next) {
 			vy[now] *= config.friction
 			through_liquid = true
 		}

@@ -12,19 +12,10 @@ Game :: struct {
 	config:    Game_Config,
 	events:    Event_Queues,
 	pixel_buf: []rl.Color,
-	mouse:     Mouse,
-	debug_ui:  Ui_Manager,
-	debugger:  Debugger,
+	debugger: Debugger
 }
 
 // maybe add mouse click here
-Mouse :: struct {
-	pos:        rl.Vector2,
-	world:      sim.World_Pos,
-	prev_world: sim.World_Pos,
-	wheel:      Wheel_State,
-	has_prev:   bool,
-}
 
 Tool :: enum {
 	Pipette,
@@ -80,18 +71,18 @@ forward_frame :: proc(debugger: ^Debugger, frame: u16 = 1) {
 	debugger.cursor = (debugger.cursor + frame) % Debugger_Size
 }
 
-current_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
-    return &debugger.frames[debugger.cursor]
+current_debug_frame :: proc(debugger: Debugger) -> sim.World {
+    return debugger.frames[debugger.cursor]
 }
-first_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
-    
-    return &debugger.frames[debugger.head]
+
+first_debug_frame :: proc(debugger: Debugger) -> sim.World {
+    return debugger.frames[debugger.head]
 }
-last_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
-    
-    return &debugger.frames[debugger.tail]
+
+last_debug_frame :: proc(debugger: Debugger) -> sim.World {
+    return debugger.frames[debugger.tail]
 }
-copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
+copy_to_frame :: proc(debugger: ^Debugger, world: World) {
     if debugger.len == 0 {
         debugger.head = 0
         debugger.tail = 0
@@ -120,25 +111,17 @@ copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
 	copy(frame.vel_y, world.vel_y)
 	//
 }
-update_mouse_state :: proc(mouse: ^Mouse) {
-	mouse_pos := rl.GetMousePosition()
-	mouse.world = mouse_world(mouse_pos)
-	mouse.pos = mouse_pos
-	if rl.GetMouseWheelMove() < 0 do mouse.wheel = .Down
-	else if rl.GetMouseWheelMove() > 0 do mouse.wheel = .Up
-	else do mouse.wheel = .None
-}
+
 
 hot_reload :: proc(world: ^sim.World) {
 	log.info("Hot reload materials' config!")
 	world.config = sim.load_world_config(sim.Config_Path)
 }
 
-create_game :: proc(instance: ^Game) {
-	debugger: Debugger
-	init_debugger(&debugger)
-	sim.create_world(&instance.world)
-	instance.config = Game_Config {
+init_game :: proc(game: ^Game) {
+    init_debugger(&game.debugger)
+	sim.create_world(&game.world)
+	game.config = Game_Config {
 		false,
 		sim.Brush_Size,
 		sim.Start_Time_Scale,
@@ -148,23 +131,19 @@ create_game :: proc(instance: ^Game) {
 		sim.Scale,
 		{0, .Brush, nil},
 	}
-	instance.debugger = debugger
-	instance.events = make_event_queues()
-	instance.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
-	instance.mouse = Mouse{{}, {}, {}, .None, false}
-	instance.debug_ui = create_ui()
+	game.events = make_event_queues()
+	game.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
 }
 
-mouse_world :: proc(mouse_pos: rl.Vector2) -> sim.World_Pos {
+world_cursor :: proc(mouse_pos: rl.Vector2) -> sim.World_Pos {
 	return sim.World_Pos(mouse_pos) / sim.Scale
 }
 
 delete_game :: proc(game: ^Game) {
+    delete_debugger(&game.debugger)
 	sim.delete_world(&game.world)
 	delete_event_queues(&game.events)
 	delete(game.pixel_buf)
-	delete_ui(&game.debug_ui)
-	delete_debugger(&game.debugger)
 }
 
 Game_Config :: struct {

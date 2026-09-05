@@ -4,20 +4,20 @@ import "core:fmt"
 import "core:math"
 import "core:math/rand"
 
-liquid_move_down :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+liquid_move_down :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	grid := world.grid
 	vy := world.vel_y
 	vx := world.vel_x
 	now := uctx.now
 	x := uctx.wpos.x;
 	y := uctx.wpos.y;
-	if i, ok := world_index(x, y + 1); !ok || !is_empty(grid, i) do return false
+	if i, ok := world_index(x, y + 1); !ok || !is_empty(world, i) do return false
 	if vy[now] < Liquid.Vy_Thresh do return false
 	step := int(math.clamp(vy[now], 1, Liquid.Max_Vy))
 	to_y := y
 	for s in 1 ..= step {
 		next_y := y + s
-		if is_outside(x, next_y) || hittable(world, idx(x, next_y)) {
+		if is_outside(x, next_y) || is_cell(world, idx(x, next_y), {.Liquid, .Powder}) {
 			if vy[now] >= config.impact_thresh {
 				// this the only place where newly create cell will get its first vx value
 				// try picking the preferred side for this cell
@@ -50,7 +50,7 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 	}
 	return false
 }
-liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	grid := world.grid
 	now := uctx.now
 	x := uctx.wpos.x;
@@ -68,13 +68,13 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 			break
 		}
 		next := idx(next_x, y)
-		if !is_empty(grid, next) {
-			if is_liquid( grid, next) && s != step {
+		if !is_empty(world, next) {
+			if is_liquid( world, next) && s != step {
 				if first_valid_x == -1 do first_valid_x = to_x
 				continue
 			}
 			check := idx(x - side, y)
-			if i, ok := world_index(x - side, y); ok && is_empty(grid, i) {
+			if i, ok := world_index(x - side, y); ok && is_empty(world, i) {
 				world.side[now] *= -1
 				vx[now] *= config.damp
 				// vx[next] += 1
@@ -86,12 +86,12 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 		to_x = next_x
 		// if !is_outside(next_x, y + 1) && is_empty(grid, idx(next_x, y + 1)) do break
 	}
-	if first_valid_x != -1 && !is_empty(grid, idx( to_x, y )) {
+	if first_valid_x != -1 && !is_empty(world, idx( to_x, y )) {
 		to_x = first_valid_x
 	}
 	if to_x != x {
 		to := idx(to_x, y)
-		is_empty(grid, to) or_return
+		is_empty(world, to) or_return
 		vx[to] = vx[now]
 		vy[to] = vy[now]
 		mark_dirty(world, World_Pos{ to_x, y })
@@ -102,7 +102,7 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: ^Update_C
 	return false
 }
 
-liquid_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+liquid_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	grid := world.grid
 	now := uctx.now
 	x := uctx.wpos.x;
@@ -111,17 +111,17 @@ liquid_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: ^Upda
 	vy := world.vel_y
 	side := world.side[now]
 	to := world_index(x + side, y + 1) or_return
-	if check, ok := world_index(x + side, y); !ok || !is_empty(grid, check) {
+	if check, ok := world_index(x + side, y); !ok || !is_empty(world, check) {
 		return false
 	}
-	is_empty(grid, to) or_return
+	is_empty(world, to) or_return
 	vx[to] = vx[now]
 	vy[to] = vy[now]
 	mark_dirty(world, World_Pos{ x + side, y + 1 })
 	move_cell(world, to, now)
 	return true
 }
-liquid_move :: proc(world: ^World, config: Material_Config, uctx: ^Update_Context) -> bool {
+liquid_move :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	now := uctx.now
 	x0 := uctx.wpos.x;
 	y0 := uctx.wpos.y;
@@ -149,7 +149,7 @@ liquid_move :: proc(world: ^World, config: Material_Config, uctx: ^Update_Contex
 	for {
     	i := world_index(to_x, to_y) or_break
         if i != now {
-           	if !is_empty(grid, i) {
+           	if !is_empty(world, i) {
                 vx[now] = vy[now] * config.impact_to_side
                 break
             }
@@ -184,8 +184,4 @@ liquid_move :: proc(world: ^World, config: Material_Config, uctx: ^Update_Contex
 	activate_chunk(world, to_chunk_pos(pos), pos)
 	append(&world.movement, [4]int{x0, y0, pos.x, pos.y})
 	return true
-}
-@(private = "file")
-hittable :: proc(world: ^World, idx: int) -> bool {
-	return is_solid(world, idx) || is_liquid(world.grid, idx)
 }

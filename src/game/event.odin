@@ -55,85 +55,10 @@ dispatch_event :: proc(world: ^World, events: ^Event_Queues) {
 	clear_queues(events)
 }
 
-create_spawn_point :: proc(mouse: ^Mouse, events: ^Event_Queues, config: ^Game_Config) {
-	deleted := false
-	for _, se in events.spawn_points {
-		if intersect(
-			se.pos.x - se.r,
-			se.pos.y - se.r,
-			2 * se.r,
-			2 * se.r,
-			mouse.world.x - config.brush_size,
-			mouse.world.y - config.brush_size,
-			config.brush_size * 2,
-			config.brush_size * 2,
-		) {
-			events.point_spawned -= 1
-			delete_key(&events.spawn_points, se.point)
-			deleted = true
-		}
-	}
-	if deleted do return
-	events.point_spawned += 1
-	map_insert(
-		&events.spawn_points,
-		events.point_spawned,
-		Spawn_Point {
-			events.point_spawned,
-			mouse.world,
-			config.brush_size,
-			config.current_mat,
-		},
-	)
-}
 intersect :: proc(x0, y0, w0, h0, x1, y1, w1, h1: int) -> bool {
 	if x0 + w0 < x1 || x0 > x1 + w1 do return false
 	if y0 + h0 < y1 || y0 > y1 + h1 do return false
 	return true
-}
-
-mouse_handler :: proc( instance: ^Game ) {
-	spawn := &instance.events.spawn
-	mouse := &instance.mouse
-	config:= &instance.config
-
-	switch config.tool_man.curr_tool {
-		case .Pipette:
-			if rl.IsMouseButtonPressed(.LEFT) {
-				x, y := instance.mouse.world.x, instance.mouse.world.y
-				config.current_mat = instance.world.grid[sim.idx(x, y)]
-				switch_tool(config, config.tool_man.prev_tool)
-			}
-		case .Brush:
-			if config.tool_man.just_switched > 0 {
-				config.tool_man.just_switched -= 1
-				return
-			}
-			if rl.IsMouseButtonDown(.LEFT) {
-				if len(spawn) < 512 {
-					if mouse.has_prev {
-						append(
-							spawn,
-							Spawn_Event{mouse.prev_world, mouse.world, config.brush_size, config.current_mat},
-						)
-					} else {
-						append(
-							spawn,
-							Spawn_Event{mouse.world, mouse.world, config.brush_size, config.current_mat},
-						)
-						mouse.has_prev = true
-					}
-					mouse.prev_world = mouse.world
-				}
-			} else do mouse.has_prev = false
-		
-			if rl.IsMouseButtonPressed(.RIGHT) {
-				float_ui := &instance.debug_ui.float_uis
-				float_ui.show =  !float_ui.show
-				float_ui.bound.x  = mouse.pos.x
-				float_ui.bound.y  = mouse.pos.y
-			}
-	}
 }
 
 brush_line :: proc(world: ^World, se: Spawn_Event) {

@@ -47,19 +47,19 @@ idx_vec :: proc(pos: World_Pos) -> int {
 	return pos.y * World_Width + pos.x
 }
 world_index :: proc {
-    world_index_from_xy,
-    world_index_from_vec
+    world_index_xy,
+    world_index_vec
 }
 
 @(private="file")
-world_index_from_vec :: proc(pos: World_Pos) -> (index: int, inside: bool) {
+world_index_vec :: proc(pos: World_Pos) -> (index: int, inside: bool) {
 	inside = !is_outside(pos.x, pos.y)
 	index = idx(pos.x, pos.y)
 	return
 }
 
 @(private="file")
-world_index_from_xy :: proc(x, y: int) -> (index: int, inside: bool) {
+world_index_xy :: proc(x, y: int) -> (index: int, inside: bool) {
 	inside = !is_outside(x, y)
 	index = idx(x, y)
 	return
@@ -196,7 +196,7 @@ update_region :: proc(world: ^World, uctx: ^Update_Context)  {
 			uctx.lpos = lpos
 			uctx.wpos = pos
 			
-			if update_cell(world, uctx){
+			if update_cell(world, uctx^){
 				mark_dirty(world, uctx^)
 				updated = true
 				if ly == min_y {
@@ -212,11 +212,11 @@ update_region :: proc(world: ^World, uctx: ^Update_Context)  {
 }
 
 
-update_cell :: proc(world: ^World, uctx: ^Update_Context) -> bool {
+update_cell :: proc(world: ^World, uctx: Update_Context) -> bool {
 	now := uctx.now
 	if world.tick == world.updated[now] do return false
 	config := world.config[world.grid[now]]
-	if is_empty(world.grid, now) || is_hard(world.grid, now) {
+	if is_empty(world, now) || is_hard(world, now) {
 		world.vel_x[now] = 0
 		world.vel_y[now] = 0
 		return false
@@ -263,22 +263,20 @@ is_dead :: proc(world: ^World, wpos: World_Pos) -> bool {
 	return left && right && bottom
 }
 
-is_hard :: proc(grid: []Material, idx: int) -> bool {
-	return grid[idx] == .Cement
+is_hard :: proc(world: ^World, idx: int) -> bool {
+	return is_cell(world, idx, {.Hard, .Semi_Hard })
 }
 
 is_solid :: proc(world: ^World, idx: int) -> (ok: bool) {
-	if is_hard(world.grid, idx) do return true
-	if world.config[world.grid[idx]].type == .Powder do return true
-	return false
+	return is_cell(world, idx, {.Hard, .Semi_Hard, .Powder})
 }
 
-is_liquid :: proc(grid: []Material, idx: int) -> bool {
-	return grid[idx] == .Water
+is_liquid :: proc(world: ^World, idx: int) -> bool {
+	return is_cell(world, idx, {.Liquid})
 }
 
-is_empty :: proc(grid: []Material, idx: int) -> bool {
-	return grid[idx] == .Empty
+is_empty :: proc(world: ^World, idx: int) -> bool {
+	return is_cell(world, idx, {.Empty})
 }
 
 random_side :: proc() -> int {
@@ -290,6 +288,21 @@ tick_from_sec :: proc(sec: f32) -> u32 {
 }
 
 material_at :: proc(world: ^World, i: int) -> Material {
-    assert(i < World_Size && i >= 0)
     return world.grid[i]
+}
+
+config_of :: proc(world: ^World, i: int) -> Material_Config {
+	return world.config[world.grid[i]]
+}
+
+mat_type_at :: proc(world: ^World, i: int) -> Material_Type {
+	return config_of(world, i).type
+}
+
+is_cell :: proc(world: ^World , i: int, $types: Mat_Types) -> bool { 
+	for type in types {
+		if mat_type_at(world, i) == type do return true
+	}
+	return false
+	
 }
