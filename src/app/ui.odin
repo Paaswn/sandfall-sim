@@ -91,9 +91,9 @@ draw_ui :: proc(app: ^App) {
 		rl.DrawText(
 			fmt.ctprintf(
 				"Oldest Tick:  %v\nCurrent Tick: %v\nLatest Tick:  %v\nMain Tick:    %v",
-				g.first_debug_frame(game.debugger).tick,
-				g.current_debug_frame(game.debugger).tick,
-				g.last_debug_frame(game.debugger).tick,
+				g.first_debug_frame(&game.debugger).tick,
+				g.current_debug_frame(&game.debugger).tick,
+				g.last_debug_frame(&game.debugger).tick,
 				game.world.tick,
 			),
 			500,
@@ -103,7 +103,7 @@ draw_ui :: proc(app: ^App) {
 		)
 	}
 	if app.ui.show {
-		draw_debug_ui(game^, &app.ui)
+		draw_debug_ui(game, &app.ui)
 		rl.DrawFPS(100, 20)
 	}
 
@@ -166,12 +166,12 @@ draw_brush :: proc(config: g.Game_Config, mouse: Cursor) {
 	}
 }
 
-draw_debug_ui :: proc(game: g.Game, ui: ^Ui) {
-	conf := game.config
-	edit_modes := ui.edit_modes
+draw_debug_ui :: proc(game: ^g.Game, ui: ^Ui) {
+	conf := &game.config
+	edit_modes := &ui.edit_modes
 	rl.GuiPanel(ui.bound, "Debug Panel")
 	// rl.DrawRectangleRoundedLines(, 0.1, 20, rl.WHITE)
-	material_list_selector(&conf, ui, {20, 50, 200, 100})
+	material_list_selector(conf, ui, {20, 50, 200, 100})
 	debug_mode_as_int := i32(conf.debug_render)
 	if rl.GuiDropdownBox(
 		{20, 20, 50, 25},

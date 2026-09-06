@@ -71,18 +71,18 @@ forward_frame :: proc(debugger: ^Debugger, frame: u16 = 1) {
 	debugger.cursor = (debugger.cursor + frame) % Debugger_Size
 }
 
-current_debug_frame :: proc(debugger: Debugger) -> sim.World {
-    return debugger.frames[debugger.cursor]
+current_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+    return &debugger.frames[debugger.cursor]
 }
 
-first_debug_frame :: proc(debugger: Debugger) -> sim.World {
-    return debugger.frames[debugger.head]
+first_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+    return &debugger.frames[debugger.head]
 }
 
-last_debug_frame :: proc(debugger: Debugger) -> sim.World {
-    return debugger.frames[debugger.tail]
+last_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+    return &debugger.frames[debugger.tail]
 }
-copy_to_frame :: proc(debugger: ^Debugger, world: World) {
+copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
     if debugger.len == 0 {
         debugger.head = 0
         debugger.tail = 0

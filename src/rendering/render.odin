@@ -68,18 +68,17 @@ draw_particles :: proc(particles: [dynamic]sim.Particle) {
 	}
 }
 
-render_game :: proc(texture: rl.Texture, game: ^g.Game ) {
+render_game :: proc(texture: rl.Texture, game: ^g.Game, world: sim.World ) {
 	
 	if game.config.debug_render != .Off {
-		build_pixel_buf(game, game.world)
+		build_pixel_buf(game, world)
 		rl.UpdateTexture(texture, raw_data(game.pixel_buf))
 	} else {
-		rl.UpdateTexture(texture, raw_data(game.world.color))
+		rl.UpdateTexture(texture, raw_data(world.color))
 	}
 	// imgui_rl.process_events()
 	// imgui_rl.new_frame()
 	// imgui.NewFrame()
-	rl.ClearBackground(rl.BLACK)
 	rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
 	// g.render_particles(world.particles)
 }
