@@ -110,7 +110,7 @@ run :: proc(a: ^App) {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 		rd.render_game(a.texture, &a.game, world^)
-		draw_ui(a)
+		draw_ui(a, world^)
 		rl.EndDrawing()
 	}
 }

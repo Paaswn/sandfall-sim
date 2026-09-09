@@ -56,10 +56,10 @@ draw_debug_chunk :: proc(world: sim.World) {
 		}
 	}
 }
-draw_ui :: proc(app: ^App) {
+draw_ui :: proc(app: ^App, world: sim.World) {
 	game := &app.game
 	if game.config.show_material_movement {
-		for p in game.world.movement {
+		for p in world.movement {
 			np := sim.Scale * p
 			rl.DrawLine(i32(np.x) + 2, i32(np.y) + 2, i32(np.z) + 2, i32(np.w) + 2, rl.PINK)
 		}
@@ -84,7 +84,7 @@ draw_ui :: proc(app: ^App) {
 		)
 	}
 	if game.config.show_chunk_border {
-		draw_debug_chunk(game.world)
+		draw_debug_chunk(world)
 	}
 
 	if game.debugger.on {
@@ -94,7 +94,7 @@ draw_ui :: proc(app: ^App) {
 				g.first_debug_frame(&game.debugger).tick,
 				g.current_debug_frame(&game.debugger).tick,
 				g.last_debug_frame(&game.debugger).tick,
-				game.world.tick,
+				world.tick,
 			),
 			500,
 			500,
@@ -113,7 +113,7 @@ draw_ui :: proc(app: ^App) {
 	draw_tool(game.config, app.control.cursor)
 
 }
-draw_tool :: proc(config: g.Game_Config, mouse: Cursor) {
+draw_tool :: proc(config: g.Game_Config, mouse: Mouse) {
 	switch config.tool_man.curr_tool {
 	case .Pipette:
 		draw_pipette(config, mouse)
@@ -122,7 +122,7 @@ draw_tool :: proc(config: g.Game_Config, mouse: Cursor) {
 	}
 }
 
-draw_pipette :: proc(config: g.Game_Config, mouse: Cursor) {
+draw_pipette :: proc(config: g.Game_Config, mouse: Mouse) {
 	rl.DrawRectangle(
 		i32(mouse.world.x * sim.Scale),
 		i32(mouse.world.y * sim.Scale),
@@ -132,7 +132,7 @@ draw_pipette :: proc(config: g.Game_Config, mouse: Cursor) {
 	)
 }
 
-draw_brush :: proc(config: g.Game_Config, mouse: Cursor) {
+draw_brush :: proc(config: g.Game_Config, mouse: Mouse) {
 
 	rl.DrawRectangle(
 		i32(mouse.world.x * sim.Scale),
