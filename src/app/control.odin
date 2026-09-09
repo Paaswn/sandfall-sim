@@ -6,13 +6,13 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 Control :: struct {
-	cursor:       Cursor,
+	cursor:       Mouse,
 	actions:      [dynamic]Action,
 	enable_kb:    bool,
 	enable_mouse: bool,
 }
 
-Cursor :: struct {
+Mouse :: struct {
 	pos:        rl.Vector2,
 	world:      sim.World_Pos,
 	prev_world: sim.World_Pos,
@@ -20,18 +20,24 @@ Cursor :: struct {
 	has_prev:   bool,
 }
 
+Button_State :: struct {
+	down:     bool,
+	released: bool,
+	pressed:  bool,
+}
+
 Modifiers :: bit_set[Modifier_Key]
 
 Input :: struct {
-	mouse_wheel: Wheel_State,
-	trigger:     Trigger,
-	modifer:     Modifiers,
-	hold:        bool,
+	trigger: Trigger,
+	modifer: Modifiers,
+	hold:    bool,
 }
 
 Trigger :: union {
 	rl.KeyboardKey,
 	rl.MouseButton,
+	Wheel_State,
 }
 
 Wheel_State :: enum {
@@ -68,33 +74,36 @@ Action :: enum {
 	Toggle_Brush_Tool,
 	Toggle_Pipette_Tool,
 	Use_Tool,
+	Show_Floating_Ui,
 }
 
 MB :: rl.MouseButton
 KK :: rl.KeyboardKey
+WS :: Wheel_State
 Keybinds :: [Action]Input {
-	.Debug_Off               = {.None, KK.ONE, {.Ctrl}, false},
-	.Debug_Velocity_Y        = {.None, KK.TWO, {.Ctrl}, false},
-	.Debug_Velocity_X        = {.None, KK.THREE, {.Ctrl}, false},
-	.Debug_Chunk             = {.None, KK.FOUR, {.Ctrl}, false},
-	.Select_Empty            = {.None, KK.ONE, {.None}, false},
-	.Increase_Tick           = {.Up, KK.KEY_NULL, {.Shift}, false},
-	.Decrease_Tick           = {.Down, KK.KEY_NULL, {.Shift}, false},
-	.Increase_Brush_Size     = {.Up, KK.KEY_NULL, {.Ctrl}, false},
-	.Decrease_Brush_Size     = {.Down, KK.KEY_NULL, {.Ctrl}, false},
-	.Make_Spawn_Point        = {.None, KK.F, {.None}, false},
-	.Hot_Reload              = {.None, KK.R, {.Ctrl}, false},
-	.Open_Debug_Menu         = {.None, KK.F1, {.None}, false},
-	.Toggle_Brush_Tool       = {.None, KK.B, {.None}, false},
-	.Toggle_Pipette_Tool     = {.None, KK.Q, {.None}, false},
-	.Debugger_Toggle         = {.None, KK.SPACE, {.None}, false},
-	.Debugger_Forward        = {.None, KK.L, {.None}, false},
-	.Debugger_Backward       = {.None, KK.H, {.None}, false},
-	.Debug_Material_Movement = {.None, KK.FIVE, {.Ctrl}, false},
-	.Use_Tool                = {.None, MB.LEFT, {.None}, true},
+	.Debug_Off               = {KK.ONE, {.Ctrl}, false},
+	.Debug_Velocity_Y        = {KK.TWO, {.Ctrl}, false},
+	.Debug_Velocity_X        = {KK.THREE, {.Ctrl}, false},
+	.Debug_Chunk             = {KK.FOUR, {.Ctrl}, false},
+	.Select_Empty            = {KK.ONE, {.None}, false},
+	.Increase_Tick           = {WS.Up, {.Shift}, false},
+	.Decrease_Tick           = {WS.Down, {.Shift}, false},
+	.Increase_Brush_Size     = {WS.Up, {.Ctrl}, false},
+	.Decrease_Brush_Size     = {WS.Down, {.Ctrl}, false},
+	.Make_Spawn_Point        = {KK.F, {.None}, false},
+	.Hot_Reload              = {KK.R, {.Ctrl}, false},
+	.Open_Debug_Menu         = {KK.F1, {.None}, false},
+	.Toggle_Brush_Tool       = {KK.B, {.None}, false},
+	.Toggle_Pipette_Tool     = {KK.Q, {.None}, false},
+	.Debugger_Toggle         = {KK.SPACE, {.None}, false},
+	.Debugger_Forward        = {KK.L, {.None}, false},
+	.Debugger_Backward       = {KK.H, {.None}, false},
+	.Debug_Material_Movement = {KK.FIVE, {.Ctrl}, false},
+	.Use_Tool                = {MB.LEFT, {.None}, true},
+	.Show_Floating_Ui        = {MB.RIGHT, {.None}, false},
 }
 
-input_handler :: proc(game: ^g.Game, control: Control, action_events: ^[dynamic]Action) {
+input_handler :: proc(game: ^g.Game, control: ^Control, action_events: ^[dynamic]Action) {
 	events := &game.events
 	config := &game.config
 	actions: for input, action in Keybinds {
@@ -120,9 +129,8 @@ input_handler :: proc(game: ^g.Game, control: Control, action_events: ^[dynamic]
 				}
 			}
 		}
-		wheel_match(input.mouse_wheel) or_continue
 		switch trig in input.trigger {
-		case rl.KeyboardKey:
+		case KK:
 			if input.hold {
 				if !rl.IsKeyDown(trig) && trig != .KEY_NULL {
 					continue
@@ -132,13 +140,18 @@ input_handler :: proc(game: ^g.Game, control: Control, action_events: ^[dynamic]
 					continue
 				}
 			}
-		case rl.MouseButton:
+		case MB:
 			control.enable_mouse or_continue
 			if input.hold {
-				rl.IsMouseButtonDown(trig) or_continue
+				if !rl.IsMouseButtonDown(trig) {
+					control.cursor.has_prev = false
+					continue
+				}
 			} else {
 				rl.IsMouseButtonPressed(trig) or_continue
 			}
+		case WS:
+			(trig == control.cursor.wheel) or_continue
 		}
 		append(action_events, action)
 	}
@@ -151,18 +164,18 @@ switch_tool :: proc(gc: ^g.Game_Config, tool: g.Tool) {
 	tm.just_switched = 30
 }
 
-update_mouse_state :: proc(mouse: ^Cursor) {
+update_mouse_state :: proc(mouse: ^Mouse) {
 	mouse_pos := rl.GetMousePosition()
 	mouse.world = g.world_cursor(mouse_pos)
+	mouse.wheel = get_wheel_state()
 	mouse.pos = mouse_pos
 }
 
-wheel_match :: proc(state: Wheel_State) -> bool {
-	wheel: Wheel_State
+get_wheel_state :: proc() -> (wheel: Wheel_State) {
 	if rl.GetMouseWheelMove() < 0 do wheel = .Down
 	else if rl.GetMouseWheelMove() > 0 do wheel = .Up
 	else do wheel = .None
-	return state == wheel
+	return
 }
 
 use_tool :: proc(game: ^g.Game, control: ^Control) {
@@ -209,14 +222,15 @@ update_input :: #force_inline proc(a: ^App) {
 	update_mouse_state(&a.control.cursor)
 	overlap :=
 		(rl.CheckCollisionPointRec(a.control.cursor.pos, a.ui.bound) && a.ui.show) ||
-		(rl.CheckCollisionPointRec(a.control.cursor.pos, a.ui.float_ui.bound) && a.ui.float_ui.show)
+		(rl.CheckCollisionPointRec(a.control.cursor.pos, a.ui.float_ui.bound) &&
+				a.ui.float_ui.show)
 	if overlap {
 		a.control.cursor.has_prev = false
 		a.control.enable_mouse = false
 	} else {
 		a.control.enable_mouse = true
 	}
-	input_handler(&a.game, a.control, &a.control.actions)
+	input_handler(&a.game, &a.control, &a.control.actions)
 }
 
 consume_action :: #force_inline proc(app: ^App) {
@@ -227,6 +241,10 @@ consume_action :: #force_inline proc(app: ^App) {
 	for e in control.actions {
 		switch e {
 
+		case .Show_Floating_Ui:
+			app.ui.float_ui.show = !app.ui.float_ui.show 
+			app.ui.float_ui.bound.x = control.cursor.pos.x
+			app.ui.float_ui.bound.y = control.cursor.pos.y
 		case .Use_Tool:
 			use_tool(game, control)
 		case .Debugger_Backward:
@@ -279,7 +297,7 @@ consume_action :: #force_inline proc(app: ^App) {
 
 init_control :: proc(ctl: ^Control) {
 	ctl.actions = make([dynamic]Action, 0, 256)
-	ctl.cursor = {{}, {}, {}, .None, false}
+	ctl.cursor = {{}, {}, {}, {}, false}
 	ctl.enable_kb = true
 	ctl.enable_mouse = true
 }
@@ -287,7 +305,7 @@ init_control :: proc(ctl: ^Control) {
 delete_control :: proc(ctl: ^Control) {
 	delete(ctl.actions)
 }
-create_spawn_point :: proc(mouse: Cursor, events: ^g.Event_Queues, config: ^g.Game_Config) {
+create_spawn_point :: proc(mouse: Mouse, events: ^g.Event_Queues, config: ^g.Game_Config) {
 	deleted := false
 	for _, se in events.spawn_points {
 		if g.intersect(
