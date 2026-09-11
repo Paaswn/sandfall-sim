@@ -12,4 +12,14 @@
     "**/settings",
     "odin-imgui",
   ],
+  "lsp": {
+    "ols": {
+      "initialization_options": {
+        "enable_inlay_hints_params": false,
+        "enable_inlay_hints_default_params": false,
+        "enable_inlay_hints_implicit_return": false,
+        "enable_inlay_hints_optional_result": false,
+      },
+    },
+  },
 }

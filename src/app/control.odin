@@ -161,7 +161,7 @@ switch_tool :: proc(gc: ^g.Game_Config, tool: g.Tool) {
 	tm := &gc.tool_man
 	tm.prev_tool = tm.curr_tool
 	tm.curr_tool = tool
-	tm.just_switched = 30
+	tm.just_switched = 10
 }
 
 update_mouse_state :: proc(mouse: ^Mouse) {
@@ -182,7 +182,7 @@ use_tool :: proc(game: ^g.Game, control: ^Control) {
 
 	switch game.config.tool_man.curr_tool {
 	case .Pipette:
-		game.config.current_mat = sim.material_at(&game.world, sim.idx(control.cursor.world))
+		game.config.current_mat = sim.id_at(game.world, sim.idx(control.cursor.world))
 		switch_tool(&game.config, game.config.tool_man.prev_tool)
 	case .Brush:
 		if game.config.tool_man.just_switched > 0 {
@@ -274,7 +274,7 @@ consume_action :: #force_inline proc(app: ^App) {
 		case .Debug_Chunk:
 			config.show_chunk_border = !config.show_chunk_border
 		case .Select_Empty:
-			config.current_mat = .Empty
+			config.current_mat = 0 
 		case .Increase_Tick:
 			config.time_scale += 1
 			if config.time_scale >= i32(len(sim.Time_Scales)) - 1 do config.time_scale = i32(len(sim.Time_Scales)) - 1

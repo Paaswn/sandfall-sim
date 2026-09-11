@@ -1,8 +1,10 @@
 package app
 import g "../game"
 import sim "../simulation"
+import "core:container/priority_queue"
 import "core:fmt"
 import "core:reflect"
+import "core:sort"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -208,5 +210,29 @@ material_list_selector :: #force_inline proc(
 		&mat_as_int,
 	)
 	if mat_as_int < 0 do mat_as_int = 0
-	conf.current_mat = sim.Material(mat_as_int)
+	conf.current_mat = sim.Material_ID(mat_as_int)
+}
+
+init_ui :: proc(ui: ^Ui, config: sim.Simulation_Config) {
+	b := strings.builder_make()
+	defer strings.builder_destroy(&b)
+	for k, _ in config {
+		strings.write_string(&b, k.name)
+		strings.write_string(&b, ";")
+	}
+	cmaterial_choices, err := strings.clone_to_cstring(strings.to_string(b))
+	assert(err == nil)
+	ui.show = false
+	ui.material_selector = {cmaterial_choices, 0, -1}
+	ui.float_ui = {{0, 0, 200, 100}, false}
+	ui.edit_modes = [Edit_Modes]bool {
+		.Time_Edit     = false,
+		.Friction_Text = false,
+		.Debug_Render  = false,
+	}
+	ui.bound = {10, 10, 250, 600}
+}
+
+delete_ui :: proc(ui: ^Ui) {
+	delete(ui.material_selector.choices)
 }

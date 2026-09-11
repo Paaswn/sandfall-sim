@@ -11,19 +11,19 @@ liquid_move_down :: proc(world: ^World, config: Material_Config, uctx: Update_Co
 	now := uctx.now
 	x := uctx.wpos.x;
 	y := uctx.wpos.y;
-	if i, ok := world_index(x, y + 1); !ok || !is_empty(world, i) do return false
+	if i, ok := world_index(x, y + 1); !ok || !is_empty(world^, i) do return false
 	if vy[now] < Liquid.Vy_Thresh do return false
 	step := int(math.clamp(vy[now], 1, Liquid.Max_Vy))
 	to_y := y
 	for s in 1 ..= step {
 		next_y := y + s
-		if is_outside(x, next_y) || is_cell(world, idx(x, next_y), {.Liquid, .Powder}) {
+		if is_outside(x, next_y) || is_cell(world^, idx(x, next_y), {.Liquid, .Powder}) {
 			if vy[now] >= config.impact_thresh {
 				// this the only place where newly create cell will get its first vx value
 				// try picking the preferred side for this cell
 				vx[now] = vy[now] * config.impact_to_side
-				if world.side[now] == 0 do world.side[now] = random_side()
-				else if random_side() > 0 do world.side[now] *= -1
+				if world.grid[now].side == 0 do world.grid[now].side = i8( random_side()) 
+				else if random_side() > 0 do world.grid[now].side *= -1
 			}
 			vy[now] *= config.damp
 			break
@@ -58,24 +58,24 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: Update_Co
 	vx := world.vel_x
 	vy := world.vel_y
 	step := int(math.clamp(vx[now], 0, Liquid.Max_Vx))
-	side := world.side[now]
+	side := int( world.grid[now].side )
 	to_x := x
 	first_valid_x := -1
 	for s := 1 ;s <= step; s += 1 {
-		next_x := x + s * world.side[now]
+		next_x := x + s * side
 		if is_outside(next_x, y) {
-			world.side[now] *= -1
+			world.grid[now].side *= -1
 			break
 		}
 		next := idx(next_x, y)
-		if !is_empty(world, next) {
-			if is_liquid( world, next) && s != step {
+		if !is_empty(world^, next) {
+			if is_liquid( world^, next) && s != step {
 				if first_valid_x == -1 do first_valid_x = to_x
 				continue
 			}
 			check := idx(x - side, y)
-			if i, ok := world_index(x - side, y); ok && is_empty(world, i) {
-				world.side[now] *= -1
+			if i, ok := world_index(x - side, y); ok && is_empty(world^, i) {
+				world.grid[now].side *= -1
 				vx[now] *= config.damp
 				// vx[next] += 1
 				// world.side[next] = side
@@ -86,12 +86,12 @@ liquid_move_side :: proc(world: ^World, config: Material_Config, uctx: Update_Co
 		to_x = next_x
 		// if !is_outside(next_x, y + 1) && is_empty(grid, idx(next_x, y + 1)) do break
 	}
-	if first_valid_x != -1 && !is_empty(world, idx( to_x, y )) {
+	if first_valid_x != -1 && !is_empty(world^, idx( to_x, y )) {
 		to_x = first_valid_x
 	}
 	if to_x != x {
 		to := idx(to_x, y)
-		is_empty(world, to) or_return
+		is_empty(world^, to) or_return
 		vx[to] = vx[now]
 		vy[to] = vy[now]
 		mark_dirty(world, World_Pos{ to_x, y })
@@ -109,12 +109,12 @@ liquid_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: Updat
 	y := uctx.wpos.y;
 	vx := world.vel_x
 	vy := world.vel_y
-	side := world.side[now]
+	side := int( world.grid[now].side )
 	to := world_index(x + side, y + 1) or_return
-	if check, ok := world_index(x + side, y); !ok || !is_empty(world, check) {
+	if check, ok := world_index(x + side, y); !ok || !is_empty(world^, check) {
 		return false
 	}
-	is_empty(world, to) or_return
+	is_empty(world^, to) or_return
 	vx[to] = vx[now]
 	vy[to] = vy[now]
 	mark_dirty(world, World_Pos{ x + side, y + 1 })
@@ -127,7 +127,7 @@ liquid_move :: proc(world: ^World, config: Material_Config, uctx: Update_Context
 	y0 := uctx.wpos.y;
 	vx := world.vel_x
 	vy := world.vel_y
-	side := world.side[now]
+	side := int( world.grid[now].side )
 	step_x := int(math.clamp(vx[now], 0, Liquid.Max_Vx)) * side
 	step_y := int(math.clamp(vy[now], 1, Liquid.Max_Vy))
 	x1, y1 := x0 + step_x, y0 + step_y
@@ -145,11 +145,11 @@ liquid_move :: proc(world: ^World, config: Material_Config, uctx: Update_Context
 	to_x := x0
 	to_y := y0
 	to := now
-	if i, ok := world_index(x0+side, y0); !ok || is_solid(world, i) do return false
+	if i, ok := world_index(x0+side, y0); !ok || is_solid(world^, i) do return false
 	for {
     	i := world_index(to_x, to_y) or_break
         if i != now {
-           	if !is_empty(world, i) {
+           	if !is_empty(world^, i) {
                 vx[now] = vy[now] * config.impact_to_side
                 break
             }

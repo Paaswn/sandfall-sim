@@ -23,14 +23,14 @@ update_particles :: proc(particles: ^[dynamic]Particle) {
 	}
 }
 
-to_particle :: proc(world: ^World, x, y: int) {
-	i := idx(x, y)
-	particle := Particle {
-		world.color[i],
-		tick_from_sec(10),
-		{f32( x*4 ), f32( y*4 )},
-		{world.vel_x[i] * 25 * f32( world.side[i] ), world.vel_y[i] * 200}
-	}
-	append(&world.particles, particle)
-	remove_material(world, i)
-}
+// to_particle :: proc(world: ^World, x, y: int) {
+// 	i := idx(x, y)
+// 	particle := Particle {
+// 		world.color[i],
+// 		tick_from_sec(10),
+// 		{f32( x*4 ), f32( y*4 )},
+// 		{world.vel_x[i] * 25 * f32( world.side[i] ), world.vel_y[i] * 200}
+// 	}
+// 	append(&world.particles, particle)
+// 	remove_material(world, i)
+// }

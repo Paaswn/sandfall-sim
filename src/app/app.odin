@@ -68,7 +68,7 @@ init_app :: proc(app: ^App) {
 	}
 	// create g instance
 	g.init_game(&app.game)
-	init_ui(&app.ui)
+	init_ui(&app.ui ,app.game.world.config)
 	init_control(&app.control)
 	// imgui_rl.init()
 	rl.InitWindow(sim.World_Width * sim.Scale, sim.World_Height * sim.Scale, "sandfall") // defer imgui_rl.shutdown()
@@ -172,22 +172,3 @@ delete_app :: proc(app: ^App) {
 	delete_ui(&app.ui)
 }
 
-init_ui :: proc(ui: ^Ui) {
-	material_choices, ok := strings.join(reflect.enum_field_names(sim.Material), ";")
-	cmaterial_choices := strings.clone_to_cstring(material_choices)
-	delete(material_choices)
-	assert(ok == nil)
-	ui.show = false
-	ui.material_selector = {cmaterial_choices, 0, -1}
-	ui.float_ui = {{0, 0, 200, 100}, false}
-	ui.edit_modes = [Edit_Modes]bool {
-		.Time_Edit     = false,
-		.Friction_Text = false,
-		.Debug_Render  = false,
-	}
-	ui.bound = {10, 10, 250, 600}
-}
-
-delete_ui :: proc(ui: ^Ui) {
-	delete(ui.material_selector.choices)
-}

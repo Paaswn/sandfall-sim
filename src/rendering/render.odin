@@ -19,15 +19,15 @@ build_pixel_buf :: proc(game: ^g.Game, world: sim.World) {
 	switch debug_mode {
 	case .Velocity_Y:
 		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: sim.World) {
-			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			if world.config[world.grid[idx]].type == .Powder do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
-			else if world.config[world.grid[idx]].type == .Liquid do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Liquid.Max_Vy)
+			if sim.cell_type_match(world, idx, .Empty) do buf[idx] = rl.GRAY
+			else if sim.cell_type_match(world, idx, .Powder) do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
+			else if sim.cell_type_match(world, idx, .Liquid) do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Liquid.Max_Vy)
 		})
 	case .Velocity_X:
 		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: sim.World) {
-			if world.grid[idx] == .Empty do buf[idx] = rl.GRAY
-			else if world.config[world.grid[idx]].type == .Powder do buf[idx] = get_vel_color(world.side[idx], world.vel_x[idx], sim.Powder.Max_Vx)
-			else if world.config[world.grid[idx]].type == .Liquid do buf[idx] = get_vel_color(world.side[idx], world.vel_x[idx], sim.Liquid.Max_Vx)
+			if sim.cell_type_match(world, idx, .Empty) do buf[idx] = rl.GRAY
+			else if sim.cell_type_match(world, idx, .Powder) do buf[idx] = get_vel_color(int( sim.cell_at(world, idx).side ), world.vel_x[idx], sim.Powder.Max_Vx)
+			else if sim.cell_type_match(world, idx, .Liquid) do buf[idx] = get_vel_color(int( sim.cell_at(world, idx).side ), world.vel_x[idx], sim.Liquid.Max_Vx)
 		})
 
 	case .Off:
@@ -74,11 +74,7 @@ render_game :: proc(texture: rl.Texture, game: ^g.Game, world: sim.World ) {
 		build_pixel_buf(game, world)
 		rl.UpdateTexture(texture, raw_data(game.pixel_buf))
 	} else {
-		rl.UpdateTexture(texture, raw_data(world.color))
+		rl.UpdateTexture(texture, raw_data(world.frame))
 	}
-	// imgui_rl.process_events()
-	// imgui_rl.new_frame()
-	// imgui.NewFrame()
 	rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
-	// g.render_particles(world.particles)
 }

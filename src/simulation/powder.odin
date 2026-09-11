@@ -18,37 +18,29 @@ powder_move_diagonal :: proc(world: ^World, config: Material_Config, uctx: Updat
 	for try in 1 ..= 2 {
 		if try == 2 do side *= -1
 		next, inside := world_index(x + side, y + 1)
-		if !inside || is_solid(world, next) || is_solid(world, idx(x + side, y)) {
+		if !inside || is_solid(world^, next) || is_solid(world^, idx(x + side, y)) {
 			// if try == 2 do vx[now] *= config.damp
 			continue
 		}
-		world.side[now] = side
+		world.grid[now].side = i8( side )
 		mark_dirty(world, World_Pos{x + side, y + 1})
 		vx[next] = vx[now] * config.friction
 		vy[next] = vy[now] * config.friction
-		if check, ok := world_index(x, y + 1); ok && is_solid(world, check) {
+		if check, ok := world_index(x, y + 1); ok && is_solid(world^, check) {
 			vx[check] += math.max(vx[now], vy[now]) * config.slide_drag
-			world.side[check] = world.side[now]
+			world.grid[check].side = world.grid[now].side
 		}
-		if is_liquid(world, next) {
+		if is_liquid(world^, next) {
 			vx[next] *= config.friction
-			swap_cell(world, next, now)
-		} else {
-			move_cell(world, next, now)
-		}
-		append(&world.movement, [4]int{x, y, x + side, y + 1})
+			// swap_cell(world, next, now)
+		} 
+		move_cell(world, next, now)
+		append(&world.movement, [4]int{x, y, x + int( side ), y + 1})
 		return true
 	}
 	return false
 }
 
-get_material_config :: proc(world: ^World, i: int) -> Material_Config {
-    return world.config[world.grid[i]]
-}
-
-get_material_type :: proc(world: ^World, i:int) -> Material_Type {
-    return world.config[world.grid[i]].type
-}
 // randomly move left or right, will try to transfer some velocity to the obstacle on a failed tick
 powder_move_side :: proc(world: ^World, config: Material_Config, uctx: Update_Context) -> bool {
 	grid := world.grid
@@ -58,29 +50,27 @@ powder_move_side :: proc(world: ^World, config: Material_Config, uctx: Update_Co
 	y := uctx.wpos.y
 	now := uctx.now
 	if vx[now] < config.side_thresh do return false
-	side := world.side[now] // get the side from velocity
+	side := int( grid[now].side ) // get the side from velocity
 	next, inside := world_index(x + side, y)
 	if !inside {
 		vx[now] *= config.damp
 		return false
 	}
-	if is_solid(world, next) {
+	if is_solid(world^, next) {
 		if vx[now] >= config.impact_thresh { 	// maybe flipping side here
 			vx[next] += vx[now] * config.impact_to_side
 			vx[now] *= config.damp
-			world.side[now] *= -1
+			world.grid[now].side *= -1
 		}
 		return false
 	}
 	mark_dirty(world, World_Pos{x + side, y})
 	vx[next] = vx[now] * config.friction
 	vy[next] = vy[now]
-	if is_liquid(world, next) {
+	if is_liquid(world^, next) {
 		vx[next] *= config.damp
-		swap_cell(world, next, now)
-	} else {
-		move_cell(world, next, now)
-	}
+	} 
+	move_cell(world, next, now)
 	append(&world.movement, [4]int{x, y, x + side, y})
 	return true
 }
@@ -94,7 +84,7 @@ powder_move_down :: proc(world: ^World, config: Material_Config, uctx: Update_Co
 	x := uctx.wpos.x
 	y := uctx.wpos.y
 	below, inside := world_index(uctx.wpos + {0,1})
-	if !inside || is_solid(world, below) do return false
+	if !inside || is_solid(world^, below) do return false
 	if vy[now] < Powder.Vy_Thresh do return false
 	step := int(math.clamp(vy[now], 1, Powder.Max_Vy))
 	to_y := y
@@ -102,15 +92,15 @@ powder_move_down :: proc(world: ^World, config: Material_Config, uctx: Update_Co
 	for s in 1 ..= step {
 		next_y := y + s
 		next, ok := world_index(x, next_y)
-		if !ok || is_solid(world, next) {
+		if !ok || is_solid(world^, next) {
 			if vy[now] >= config.impact_thresh {
 				vx[now] = vy[now] * config.impact_to_side
-				world.side[now] = random_side()
+				world.grid[now].side = i8( random_side() )
 			}
 			vy[now] *= config.damp
 			break
 		}
-		if ok && is_liquid(world, next) {
+		if ok && is_liquid(world^, next) {
 			vy[now] *= config.friction
 			through_liquid = true
 		}
@@ -123,22 +113,22 @@ powder_move_down :: proc(world: ^World, config: Material_Config, uctx: Update_Co
 		mark_dirty(world, World_Pos {x, to_y})
 		if !through_liquid {
 			get_friction := false
-			if left, inside := world_index(x - 1, to_y); inside && is_solid(world, left) {
+			if left, inside := world_index(x - 1, to_y); inside && is_solid(world^, left) {
 				vx[left] += vy[now] * config.fall_drag
 				mark_dirty(world, World_Pos {x - 1, to_y})
-				world.side[left] = world.side[now]
+				world.grid[left].side = world.grid[now].side
 				get_friction = true
 			}
-			if right, inside := world_index(x + 1, to_y); inside && is_solid(world, right) {
+			if right, inside := world_index(x + 1, to_y); inside && is_solid(world^, right) {
 				vx[right] += vy[now] * config.fall_drag
 				mark_dirty(world, World_Pos {x + 1, to_y})
-				world.side[right] = world.side[now]
+				world.grid[right].side = world.grid[now].side
 				get_friction = true
 			}
 			if get_friction do vx[now] *= config.friction
 			move_cell(world, to, now)
 		} else {
-			swap_cell(world, to, now)
+			// swap_cell(world, to, now)
 		}
 		append(&world.movement, [4]int{x, y, x, to_y})
 		return true

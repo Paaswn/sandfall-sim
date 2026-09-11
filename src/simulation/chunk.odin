@@ -1,9 +1,5 @@
 package simulation
 
-import "core:prof/spall"
-import "core:math"
-import "../profiling"
-
 update_bound :: proc {
 	update_bound_world,
 	update_bound_local,
@@ -154,12 +150,12 @@ chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
 }
 
 mark_dirty :: proc {
-	mark_dirty_context,
+	mark_chunk_dirty_context,
 	mark_chunk_dirty
 }
 
 @(private="file")
-mark_dirty_context :: proc(world: ^World, uctx: Update_Context) {
+mark_chunk_dirty_context :: proc(world: ^World, uctx: Update_Context) {
 	activate_chunk(world.tick, uctx)
 	if uctx.lpos.y == 0 {
 		activate_chunk(world, uctx.cpos - {0, 1}, uctx.wpos - {0, 1})

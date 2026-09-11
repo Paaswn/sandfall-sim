@@ -2,10 +2,7 @@ package simulation
 
 import "core:log"
 import "core:encoding/json"
-import "core:fmt"
 import "core:os"
-import "core:reflect"
-import rl "vendor:raylib"
 
 // Runtime Config
 Time_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
@@ -29,34 +26,17 @@ Gravity: f32 : 980
 Scale :: 4
 Brush_Size :: 4
 Start_Time_Scale :: 5
-Start_Mat :: Material.Sand
+Start_Mat : Material_ID : 2
 // Global Material Constant
 Powder :: Material_Type_Config{1, 8.0, 4.0}
 Liquid :: Material_Type_Config{1.5, 10.0, 8.0}
-Fallback_Conf: [Material]Material_Config = {
-	.Empty  = Material_Config{},
-	.Sand   = Material_Config{},
-	.Dirt   = Material_Config{},
-	.Water  = Material_Config{},
-	.Cement = Material_Config{},
-}
 
-load_world_config :: proc(path: string) -> (res: World_Config) {
+load_world_config :: proc(path: string, sim_config: ^Simulation_Config) {
 	data, err := os.read_entire_file(path, context.allocator)
-	if err != nil do panic(fmt.tprintfln("Failed to load file: %v", err))
+	if err != nil do log.panic("Failed to load file: ", err)
 	defer delete(data)
-	temp_map := make(map[string]Material_Config)
-	defer delete(temp_map)
-	unmarshal_err := json.unmarshal_any(data, &temp_map)
+	unmarshal_err := json.unmarshal_any(data, sim_config)
 	if unmarshal_err != nil {
-		log.warn("Failed to parse config file, fallback config was loaded")
-		return Fallback_Conf
+		log.panic("Unmarshal simulation config failed ", unmarshal_err)
 	}
-	enum_arr: World_Config
-	for k, v in temp_map {
-		if var, ok := reflect.enum_from_name(Material, k); ok {
-			enum_arr[var] = v
-		}
-	}
-	return enum_arr
 }

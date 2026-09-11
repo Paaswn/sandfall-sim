@@ -11,21 +11,21 @@ Event_Queues :: struct {
 	point_spawned: int,
 }
 
-Material :: sim.Material
+Material_ID :: sim.Material_ID
 World :: sim.World
 Debug :: sim.Debug
 Spawn_Event :: struct {
     prev_pos: sim.World_Pos,
     pos: sim.World_Pos,
 	r:        int,
-	material: Material,
+	material: Material_ID,
 }
 
 Spawn_Point :: struct {
 	point:    int,
 	pos: sim.World_Pos,
 	r:        int,
-	material: Material,
+	material: Material_ID,
 }
 
 make_event_queues :: proc() -> Event_Queues {

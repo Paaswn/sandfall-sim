@@ -103,10 +103,7 @@ copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
 	resize(&frame.movement, len(world.movement))
 	copy(frame.movement[:], world.movement[:])
 	copy(frame.chunks, world.chunks)
-	copy(frame.color, world.color)
 	copy(frame.grid, world.grid)
-	copy(frame.side, world.side)
-	copy(frame.updated, world.updated)
 	copy(frame.vel_x, world.vel_x)
 	copy(frame.vel_y, world.vel_y)
 	//
@@ -115,26 +112,29 @@ copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
 
 hot_reload :: proc(world: ^sim.World) {
 	log.info("Hot reload materials' config!")
-	world.config = sim.load_world_config(sim.Config_Path)
+	sim.load_world_config(sim.Config_Path, &world.config)
 }
 
 init_game :: proc(game: ^Game) {
     init_debugger(&game.debugger)
 	sim.create_world(&game.world)
-	game.config = Game_Config {
-		false,
-		sim.Brush_Size,
-		sim.Start_Time_Scale,
-		sim.Debug.Off,
-		false,
-		sim.Start_Mat,
-		sim.Scale,
-		{0, .Brush, nil},
-	}
+	init_game_config(game)
 	game.events = make_event_queues()
 	game.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
 }
 
+init_game_config :: proc(game: ^Game) {
+	game.config = {
+			false,
+			sim.Brush_Size,
+			sim.Start_Time_Scale,
+			sim.Debug.Off,
+			false,
+			sim.Start_Mat,
+			sim.Scale,
+			{0, .Brush, nil},
+		}
+}
 world_cursor :: proc(mouse_pos: rl.Vector2) -> sim.World_Pos {
 	return sim.World_Pos(mouse_pos) / sim.Scale
 }
@@ -152,7 +152,7 @@ Game_Config :: struct {
 	time_scale:             i32,
 	debug_render:           sim.Debug,
 	show_chunk_border:      bool,
-	current_mat:            Material,
+	current_mat:            sim.Material_ID,
 	window_scale:           int,
 	tool_man:               Tool_Manager,
 }

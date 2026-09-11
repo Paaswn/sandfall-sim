@@ -1,16 +1,21 @@
-{
-  "Empty": {
+[ 
+  {
+    "name": "Empty",
     "type": "Empty",
-    "color": "Black",
+    "color": [0, 0, 0, 255],
     "variance": 0
   },
-  "Cement": {
+  {
+    "name": "Cement",
     "type": "Semi_Hard",
-    "color": "DARKGRAY",
-    "variance": 20
+    "color": [112, 112, 112, 255],
+    "variance": 3
   },
-  "Sand": {
+  {
+    "name": "Sand",
     "type": "Powder",
+    "color": [191, 179, 159, 255],
+    "variance": 10,
     "down_acc": 30,
     "slide_thresh": 1.5,
     "side_thresh": 2.2,
@@ -19,12 +24,13 @@
     "impact_to_side": 0.6,
     "impact_thresh": 2.5,
     "slide_drag": 0.28,
-    "fall_drag": 0.12,
-    "color": "DARKGRAY",
-    "variance": 20
+    "fall_drag": 0.12
   },
-  "Dirt": {
+  {
+    "name": "Dirt",
     "type": "Powder",
+    "color": [77, 47, 31, 255],
+    "variance": 5,
     "down_acc": 40,
     "slide_thresh": 2.0,
     "side_thresh": 2.5,
@@ -33,12 +39,13 @@
     "impact_to_side": 0.9,
     "impact_thresh": 2.5,
     "slide_drag": 0.3,
-    "fall_drag": 0.2,
-    "color": "DARKGRAY",
-    "variance": 20
+    "fall_drag": 0.2
   },
-  "Water": {
+ {
+    "name": "Water",
     "type": "Liquid",
+    "color": [52, 95, 224, 255],
+    "variance": 0,
     "down_acc": 30,
     "slide_thresh": 0,
     "side_thresh": 0.2,
@@ -47,8 +54,6 @@
     "impact_to_side": 0.6,
     "impact_thresh": 2.5,
     "slide_drag": 0.1,
-    "fall_drag": 0.1,
-    "color": "DARKGRAY",
-    "variance": 20
+    "fall_drag": 0.1
   }
-}
+]
