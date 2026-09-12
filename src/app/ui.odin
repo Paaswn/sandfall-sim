@@ -9,11 +9,11 @@ import "core:strings"
 import rl "vendor:raylib"
 
 
-draw_debug_chunk :: proc(world: sim.World) {
+draw_debug_chunk :: proc(simulation: sim.Simulation) {
 	@(static) num: [10]cstring = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
-	for &chunk, i in world.chunks {
-		if sim.chunk_active(&chunk, world.tick) {
-			S :: sim.Scale
+	for &chunk, i in simulation.chunks {
+		if sim.chunk_active(&chunk, simulation.tick) {
+			S :: sim.SCALE
 			bound, ok := chunk.next_bound.?
 			cp := sim.to_chunk_pos(i)
 			pos := sim.to_world_pos(cp, {0, 0})
@@ -22,13 +22,13 @@ draw_debug_chunk :: proc(world: sim.World) {
 			rl.DrawRectangleLines(
 				i32(pos.x * S),
 				i32(pos.y * S),
-				i32(sim.Chunk_Size * S),
-				i32(sim.Chunk_Size * S),
+				i32(sim.CHUNK_SIZE * S),
+				i32(sim.CHUNK_SIZE * S),
 				color,
 			)
 			// if !ok do continue
 			// CS := sim.Chunk_Size
-			j := world.tick - chunk.last_updated_tick
+			j := simulation.tick - chunk.last_updated_tick
 			to_reset: cstring
 			chunk_age: cstring
 			if j >= len(num) {
@@ -38,8 +38,8 @@ draw_debug_chunk :: proc(world: sim.World) {
 			}
 			rl.DrawText(
 				fmt.ctprint(chunk_age),
-				i32((pos.x + sim.Chunk_Size / 2) * S),
-				i32((pos.y + sim.Chunk_Size / 2) * S),
+				i32((pos.x + sim.CHUNK_SIZE / 2) * S),
+				i32((pos.y + sim.CHUNK_SIZE / 2) * S),
 				20,
 				rl.WHITE,
 			)
@@ -58,35 +58,35 @@ draw_debug_chunk :: proc(world: sim.World) {
 		}
 	}
 }
-draw_ui :: proc(app: ^App, world: sim.World) {
+draw_ui :: proc(app: ^App, simulation: sim.Simulation) {
 	game := &app.game
 	if game.config.show_material_movement {
-		for p in world.movement {
-			np := sim.Scale * p
+		for p in simulation.cell_traces {
+			np := sim.SCALE * p
 			rl.DrawLine(i32(np.x) + 2, i32(np.y) + 2, i32(np.z) + 2, i32(np.w) + 2, rl.PINK)
 		}
 	}
 
-	for i: i32 = 0; i <= sim.World_Height; i += sim.Chunk_Size {
+	for i: i32 = 0; i <= sim.WORLD_HEIGHT; i += sim.CHUNK_SIZE {
 		rl.DrawLine(
 			0,
-			i * sim.Scale,
-			sim.World_Width * sim.Scale,
-			i * sim.Scale,
+			i * sim.SCALE,
+			sim.WORLD_WIDTH * sim.SCALE,
+			i * sim.SCALE,
 			{255, 255, 255, 89},
 		)
 	}
-	for i: i32 = 0; i <= sim.World_Width; i += sim.Chunk_Size {
+	for i: i32 = 0; i <= sim.WORLD_WIDTH; i += sim.CHUNK_SIZE {
 		rl.DrawLine(
-			i * sim.Scale,
+			i * sim.SCALE,
 			0,
-			i * sim.Scale,
-			sim.World_Height * sim.Scale,
+			i * sim.SCALE,
+			sim.WORLD_HEIGHT * sim.SCALE,
 			{255, 255, 255, 89},
 		)
 	}
 	if game.config.show_chunk_border {
-		draw_debug_chunk(world)
+		draw_debug_chunk(simulation)
 	}
 
 	if game.debugger.on {
@@ -96,7 +96,7 @@ draw_ui :: proc(app: ^App, world: sim.World) {
 				g.first_debug_frame(&game.debugger).tick,
 				g.current_debug_frame(&game.debugger).tick,
 				g.last_debug_frame(&game.debugger).tick,
-				world.tick,
+				simulation.tick,
 			),
 			500,
 			500,
@@ -126,10 +126,10 @@ draw_tool :: proc(config: g.Game_Config, mouse: Mouse) {
 
 draw_pipette :: proc(config: g.Game_Config, mouse: Mouse) {
 	rl.DrawRectangle(
-		i32(mouse.world.x * sim.Scale),
-		i32(mouse.world.y * sim.Scale),
-		i32(sim.Scale),
-		i32(sim.Scale),
+		i32(mouse.world.x * sim.SCALE),
+		i32(mouse.world.y * sim.SCALE),
+		i32(sim.SCALE),
+		i32(sim.SCALE),
 		rl.WHITE,
 	)
 }
@@ -137,10 +137,10 @@ draw_pipette :: proc(config: g.Game_Config, mouse: Mouse) {
 draw_brush :: proc(config: g.Game_Config, mouse: Mouse) {
 
 	rl.DrawRectangle(
-		i32(mouse.world.x * sim.Scale),
-		i32(mouse.world.y * sim.Scale),
-		i32(sim.Scale),
-		i32(sim.Scale),
+		i32(mouse.world.x * sim.SCALE),
+		i32(mouse.world.y * sim.SCALE),
+		i32(sim.SCALE),
+		i32(sim.SCALE),
 		rl.WHITE,
 	)
 	if config.brush_size == 0 do return
@@ -157,10 +157,10 @@ draw_brush :: proc(config: g.Game_Config, mouse: Mouse) {
 			inner := (config.brush_size - 1) * (config.brush_size - 1)
 			if dist2 < outer && dist2 >= inner {
 				rl.DrawRectangle(
-					i32(x * sim.Scale),
-					i32(y * sim.Scale),
-					i32(sim.Scale),
-					i32(sim.Scale),
+					i32(x * sim.SCALE),
+					i32(y * sim.SCALE),
+					i32(sim.SCALE),
+					i32(sim.SCALE),
 					rl.WHITE,
 				)
 			}

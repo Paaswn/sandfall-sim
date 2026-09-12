@@ -1,14 +1,12 @@
 package game
 
 import sim "../simulation"
-import "core:container/queue"
 import "core:fmt"
 import "core:log"
-import "core:slice"
 import rl "vendor:raylib"
 
 Game :: struct {
-	world:     sim.World,
+	simulation:     sim.Simulation,
 	config:    Game_Config,
 	events:    Event_Queues,
 	pixel_buf: []rl.Color,
@@ -29,7 +27,7 @@ Tool_Manager :: struct {
 
 Debugger_Size :: 16
 Debugger :: struct {
-	frames: [Debugger_Size]World,
+	frames: [Debugger_Size]sim.Simulation,
 	on:     bool,
 	head:   u16,
 	cursor: u16,
@@ -41,13 +39,13 @@ Debugger :: struct {
 
 init_debugger :: proc(debugger: ^Debugger) {
 	for &df in debugger.frames {
-		sim.create_world(&df)
+		sim.init_sim(&df)
 	}
 }
 
 delete_debugger :: proc(debugger: ^Debugger) {
 	for &df in debugger.frames {
-		sim.delete_world(&df)
+		sim.destroy_sim(&df)
 	}
 }
 
@@ -71,18 +69,18 @@ forward_frame :: proc(debugger: ^Debugger, frame: u16 = 1) {
 	debugger.cursor = (debugger.cursor + frame) % Debugger_Size
 }
 
-current_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+current_debug_frame :: proc(debugger: ^Debugger) -> ^sim.Simulation {
     return &debugger.frames[debugger.cursor]
 }
 
-first_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+first_debug_frame :: proc(debugger: ^Debugger) -> ^sim.Simulation {
     return &debugger.frames[debugger.head]
 }
 
-last_debug_frame :: proc(debugger: ^Debugger) -> ^sim.World {
+last_debug_frame :: proc(debugger: ^Debugger) -> ^sim.Simulation {
     return &debugger.frames[debugger.tail]
 }
-copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
+copy_to_frame :: proc(debugger: ^Debugger, simulation: ^sim.Simulation) {
     if debugger.len == 0 {
         debugger.head = 0
         debugger.tail = 0
@@ -98,50 +96,51 @@ copy_to_frame :: proc(debugger: ^Debugger, world: ^World) {
 	frame := &debugger.frames[debugger.tail]
 
 	// copy current world to frame
-	frame.tick = world.tick
-	frame.config = world.config
-	resize(&frame.movement, len(world.movement))
-	copy(frame.movement[:], world.movement[:])
-	copy(frame.chunks, world.chunks)
-	copy(frame.grid, world.grid)
-	copy(frame.vel_x, world.vel_x)
-	copy(frame.vel_y, world.vel_y)
+	frame.tick = simulation.tick
+	frame.config = simulation.config
+	resize(&frame.cell_traces, len(simulation.cell_traces))
+	copy(frame.cell_traces[:], simulation.cell_traces[:])
+	copy(frame.chunks, simulation.chunks)
+	copy(frame.frame, simulation.frame)
+	for i in 0..<len(simulation.world) {
+	    frame.world[i] = simulation.world[i]
+	}
 	//
 }
 
 
-hot_reload :: proc(world: ^sim.World) {
+hot_reload :: proc(world: ^sim.Simulation) {
 	log.info("Hot reload materials' config!")
-	sim.load_world_config(sim.Config_Path, &world.config)
+	sim.load_world_config(sim.CONFIG_PATH, &world.config)
 }
 
 init_game :: proc(game: ^Game) {
     init_debugger(&game.debugger)
-	sim.create_world(&game.world)
+	sim.init_sim(&game.simulation)
 	init_game_config(game)
 	game.events = make_event_queues()
-	game.pixel_buf = make([]rl.Color, sim.World_Width * sim.World_Height)
+	game.pixel_buf = make([]rl.Color, sim.WORLD_WIDTH * sim.WORLD_HEIGHT)
 }
 
 init_game_config :: proc(game: ^Game) {
 	game.config = {
 			false,
-			sim.Brush_Size,
-			sim.Start_Time_Scale,
+			sim.BRUSH_SIZE,
+			sim.START_TIME_SCALE,
 			sim.Debug.Off,
 			false,
-			sim.Start_Mat,
-			sim.Scale,
+			sim.START_MATERIAL,
+			sim.SCALE,
 			{0, .Brush, nil},
 		}
 }
 world_cursor :: proc(mouse_pos: rl.Vector2) -> sim.World_Pos {
-	return sim.World_Pos(mouse_pos) / sim.Scale
+	return sim.World_Pos(mouse_pos) / sim.SCALE
 }
 
-delete_game :: proc(game: ^Game) {
+destroy_game :: proc(game: ^Game) {
     delete_debugger(&game.debugger)
-	sim.delete_world(&game.world)
+	sim.destroy_sim(&game.simulation)
 	delete_event_queues(&game.events)
 	delete(game.pixel_buf)
 }

@@ -182,7 +182,7 @@ use_tool :: proc(game: ^g.Game, control: ^Control) {
 
 	switch game.config.tool_man.curr_tool {
 	case .Pipette:
-		game.config.current_mat = sim.id_at(game.world, sim.idx(control.cursor.world))
+		game.config.current_mat = sim.id_at(game.simulation.world, sim.idx(control.cursor.world))
 		switch_tool(&game.config, game.config.tool_man.prev_tool)
 	case .Brush:
 		if game.config.tool_man.just_switched > 0 {
@@ -277,7 +277,7 @@ consume_action :: #force_inline proc(app: ^App) {
 			config.current_mat = 0 
 		case .Increase_Tick:
 			config.time_scale += 1
-			if config.time_scale >= i32(len(sim.Time_Scales)) - 1 do config.time_scale = i32(len(sim.Time_Scales)) - 1
+			if config.time_scale >= i32(len(sim.TIME_SCALES)) - 1 do config.time_scale = i32(len(sim.TIME_SCALES)) - 1
 		case .Decrease_Tick:
 			config.time_scale -= 1
 			if config.time_scale <= 0 do config.time_scale = 0

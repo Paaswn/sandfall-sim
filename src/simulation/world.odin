@@ -5,45 +5,6 @@ import "core:math/rand"
 import "core:prof/spall"
 import "core:math"
 
-World :: struct {
-	tick:      u32,
-	vel_x:     []f32,
-	vel_y:     []f32,
-	grid:      []Cell,
-	chunks:    []Chunk,
-	particles: [dynamic]Particle,
-	config:    Simulation_Config,
-	update_tick: []u32,
-	frame:     []Color,
-	movement:  [dynamic][4]int,
-}
-
-create_world :: proc(world: ^World) {
-	world.tick = 0
-	world.vel_x = make([]f32, World_Size)
-	world.vel_y = make([]f32, World_Size)
-	world.grid = make([]Cell, World_Size)
-	world.chunks = make([]Chunk, Width_In_Chunk * Height_In_Chunk)
-	world.particles = make([dynamic]Particle, 0, 128)
-	load_world_config(Config_Path, &world.config)
-	world.frame = make([]Color, World_Size)
-	world.movement = make([dynamic][4]int, 0, World_Size)
-	world.update_tick = make([]u32, World_Size)
-}
-
-delete_world :: proc(world: ^World) {
-	delete(world.vel_x)
-	delete(world.vel_y)
-	delete(world.grid)
-	delete(world.chunks)
-	delete(world.particles)
-	delete(world.movement)
-	delete(world.config)
-	delete(world.frame)
-	delete(world.update_tick)
-	delete(world.config)
-}
-
 idx :: proc {
 	idx_xy,
 	idx_vec,
@@ -51,12 +12,12 @@ idx :: proc {
 
 @(private = "file")
 idx_xy :: proc(x, y: int) -> int {
-	return y * World_Width + x
+	return y * WORLD_WIDTH + x
 }
 
 @(private = "file")
 idx_vec :: proc(pos: World_Pos) -> int {
-	return pos.y * World_Width + pos.x
+	return pos.y * WORLD_WIDTH + pos.x
 }
 world_index :: proc {
 	world_index_xy,
@@ -83,15 +44,14 @@ is_outside :: proc {
 }
 @(private = "file")
 is_outside_vec :: proc(pos: World_Pos) -> bool {
-	return pos.x < 0 || pos.y < 0 || pos.x > World_Width - 1 || pos.y > World_Height - 1
+	return pos.x < 0 || pos.y < 0 || pos.x > WORLD_WIDTH - 1 || pos.y > WORLD_HEIGHT - 1
 }
 @(private = "file")
 is_outside_xy :: proc(x, y: int) -> bool {
-	return x < 0 || y < 0 || x > World_Width - 1 || y > World_Height - 1
+	return x < 0 || y < 0 || x > WORLD_WIDTH - 1 || y > WORLD_HEIGHT - 1
 }
 
-
-circle_brush_spawn :: proc(world: ^World, o: World_Pos, r: int, id: Material_ID) {
+circle_brush_spawn :: proc(sim: ^Simulation, o: World_Pos, r: int, id: Material_ID) {
 	for x in o.x - r ..= o.x + r {
 		for y in o.y - r ..= o.y + r {
 			if is_outside(x, y) {
@@ -100,7 +60,7 @@ circle_brush_spawn :: proc(world: ^World, o: World_Pos, r: int, id: Material_ID)
 			dx := x - o.x
 			dy := y - o.y
 			if dx * dx + dy * dy < r * r {
-				spawn_material(world, id, {x, y})
+				spawn_material(sim, id, {x, y})
 			}
 		}
 	}
@@ -109,32 +69,29 @@ circle_brush_spawn :: proc(world: ^World, o: World_Pos, r: int, id: Material_ID)
 /*
 	This function will be called before world's tick has advanced but after world's grid has updated
 */
-spawn_material :: proc(world: ^World, id: Material_ID, pos: World_Pos) {
+spawn_material :: proc(sim: ^Simulation, id: Material_ID, pos: World_Pos) {
 	i := idx(pos)
-	if (id_at(world^, i) == id) do return
+	if (id_at(sim.world, i) == id) do return
 
-	cell: Cell
-	activate_chunk(world, to_chunk_pos(pos), pos)
-	if type_of_id_match(world^, id, .Liquid){
+	cell := &sim.world[i]
+	activate_chunk(sim^, to_chunk_pos(pos), pos)
+	cell.id = id
+	cell.update_tick = sim.tick
+	cell.variance = 1
+	cell.vel = {0, 1}
+	if type_of_id_match(sim^, id, .Liquid){
 		cell.side = i8(random_side())
 	}
-	cell.id = id
-	world.update_tick[i] = world.tick
-	cell.variance = 1
-	world.frame[i] = get_cell_color(world^, cell)
-	world.grid[i] = cell
 
-	world.vel_x[i] = 0
-	world.vel_y[i] = 1
+	sim.frame[i] = get_cell_color(sim^, cell^)
 }
 
 remove_material :: proc(world: ^World, idx: int) {
-	world.grid[idx] = {
+	world[idx] = {
 		id   = 0,
 		side = 0,
 	}
-	world.vel_x[idx] = 0
-	world.vel_y[idx] = 0
+	world[idx].vel = {0, 0}
 }
 /*
 	MOVE material, color, active state
@@ -143,33 +100,31 @@ remove_material :: proc(world: ^World, idx: int) {
 
 	**DOESN'T MOVE VELOCITY**
 */
-move_cell :: proc(world: ^World, to, from: int) {
-	world.grid[to], world.grid[from] = world.grid[from], Cell {
-			id   = 0,
-			side = 0,
-	}
-	world.update_tick[to] = world.tick
-	world.frame[to], world.frame[from] = world.frame[from], {0,0,0,255}
-	world.vel_x[from], world.vel_y[from] = 0, 0
+move_cell :: proc(sim: Simulation, to, from: int) {
+	sim.world[to]  = sim.world[from]
+	sim.world[from].id = 0
+	sim.world[to].update_tick = sim.tick
+	sim.frame[to] = sim.frame[from] 
+	sim.frame[from] = {0, 0, 0, 255}
 }
 
 
-update_grid :: proc(world: ^World) {
+update_grid :: proc(sim: ^Simulation) {
 	when profiling.PROFILE {
 		spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
 	}
-	for y := Height_In_Chunk - 1; y >= 0; y -= 1 {
-		start_x, end_x, step_x := 0, Width_In_Chunk, 1
-		if world.tick % 2 == 0 {
-			start_x = Width_In_Chunk - 1
+	for y := HEIGHT_IN_CHUNK - 1; y >= 0; y -= 1 {
+		start_x, end_x, step_x := 0, WIDTH_IN_CHUNK, 1
+		if sim.tick % 2 == 0 {
+			start_x = WIDTH_IN_CHUNK - 1
 			end_x = -1
 			step_x = -1
 		}
 		for x := start_x; x != end_x; x += step_x {
-			c := get_chunk(world.chunks, Chunk_Pos{x, y})
-			if chunk_active(c, world.tick) {
+			c := get_chunk(sim.chunks, Chunk_Pos{x, y})
+			if chunk_active(c, sim.tick) {
 				update_context := Update_Context{c, 0, {x, y}, {}, {}}
-				update_region(world, &update_context)
+				update_region(sim, &update_context)
 			} else {
 				c.next_bound = nil
 			}
@@ -177,7 +132,7 @@ update_grid :: proc(world: ^World) {
 	}
 }
 
-update_region :: proc(world: ^World, uctx: ^Update_Context) {
+update_region :: proc(sim: ^Simulation, uctx: ^Update_Context) {
 	when profiling.PROFILE {
 		spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
 	}
@@ -187,7 +142,7 @@ update_region :: proc(world: ^World, uctx: ^Update_Context) {
 	min_y := bound.y
 	for ly := bound.y2; ly >= min_y; ly -= 1 {
 		start_lx, end_lx, step_lx := bound.x, bound.x2 + 1, 1
-		if world.tick % 2 != 0 {
+		if sim.tick % 2 != 0 {
 			start_lx = bound.x2
 			end_lx = bound.x - 1
 			step_lx = -1
@@ -199,16 +154,16 @@ update_region :: proc(world: ^World, uctx: ^Update_Context) {
 			uctx.now = idx(pos)
 			uctx.lpos = lpos
 			uctx.wpos = pos
-			if update_cell(world, uctx^) {
-				mark_dirty(world, uctx^)
+			if update_cell(sim, uctx^) {
+				mark_dirty(sim^, uctx^)
 				updated = true
 				if ly == min_y {
 					new_y := max(ly - 1, 0)
 					update_bound(uctx.chunk, Local_Pos{lx, new_y})
 					min_y = new_y
 				}
-			} else if chunk_active(uctx.chunk, world.tick) &&
-			   !is_cell(world^, uctx.now, {.Empty}) {
+			} else if chunk_active(uctx.chunk, sim.tick) &&
+			   !is_cell(sim^, uctx.now, {.Empty}) {
 				update_bound(uctx.chunk, uctx.lpos)
 			}
 		}
@@ -216,71 +171,69 @@ update_region :: proc(world: ^World, uctx: ^Update_Context) {
 }
 
 
-update_cell :: proc(world: ^World, uctx: Update_Context) -> (ok: bool) {
+update_cell :: proc(sim: ^Simulation, uctx: Update_Context) -> (ok: bool) {
 	now := uctx.now
 	ok = false
-	if world.tick == world.update_tick[now] do return 
-	if is_empty(world^, now) || is_hard(world^, now) {
-		world.vel_x[now] = 0
-		world.vel_y[now] = 0
+	if sim.tick == sim.world[now].update_tick do return 
+	if is_empty(sim^, now) || is_hard(sim^, now) {
+	    sim.world[now].vel = {0, 0}
 		return 
 	}
-	if is_dead(world^, uctx.wpos) {
+	if is_dead(sim^, uctx.wpos) {
 		// vy[now] *= config.damp
 		return
 	}
-	conf := config_of(world^, now)
+	conf := config_of(sim^, now)
 	#partial switch conf.type {
 	case .Powder:
-		apply_gravity(world, now, conf, Powder)
-		if powder_move_down(world, conf, uctx) do ok = true
-		if powder_move_diagonal(world, conf, uctx) do ok = true
-		if powder_move_side(world, conf, uctx) do ok = true
+		apply_gravity(sim.world, now, conf, POWDER)
+		if powder_move_down(sim, conf, uctx) do ok = true
+		if powder_move_diagonal(sim, conf, uctx) do ok = true
+		if powder_move_side(sim, conf, uctx) do ok = true
 	case .Liquid:
-		apply_gravity(world, now, conf, Liquid)
-		if liquid_move(world, conf, uctx) do ok = true
-		if liquid_move_diagonal(world, conf, uctx) do ok = true
-		if liquid_move_side(world, conf, uctx) do ok = true
+		apply_gravity(sim.world, now, conf, LIQUID)
+		if liquid_move(sim, conf, uctx) do ok = true
+		if liquid_move_diagonal(sim, conf, uctx) do ok = true
+		if liquid_move_side(sim, conf, uctx) do ok = true
 	}
 	return
 }
 
 apply_gravity :: proc(
-	world: ^World,
+	world: World,
 	now: int,
 	conf: Material_Config,
 	mt_conf: Material_Type_Config,
 ) {
-	vy := world.vel_y
-	vy[now] = math.clamp(vy[now] + conf.down_acc * Dt32, 0, mt_conf.Max_Vy)
+    vy := world[now].vel.y
+	world[now].vel.y = math.clamp(vy + conf.down_acc * DT32, 0, mt_conf.Max_Vy)
 }
 
-is_dead :: proc(world: World, wpos: World_Pos) -> bool {
+is_dead :: proc(sim: Simulation, wpos: World_Pos) -> bool {
 	x := wpos.x
 	y := wpos.y
 	// up := is_outside(x, y - 1) || is_solid(world, idx(x, y - 1))
-	left := is_outside(x - 1, y) || is_solid(world, idx(x - 1, y))
-	right := is_outside(x + 1, y) || is_solid(world, idx(x + 1, y))
-	bottom := is_outside(x, y + 1) || is_solid(world, idx(x, y + 1))
+	left := is_outside(x - 1, y) || is_solid(sim, idx(x - 1, y))
+	right := is_outside(x + 1, y) || is_solid(sim, idx(x + 1, y))
+	bottom := is_outside(x, y + 1) || is_solid(sim, idx(x, y + 1))
 	return left && right && bottom
 }
 
-is_hard :: proc(world: World, idx: int) -> bool {
-	return is_cell(world, idx, {.Hard, .Semi_Hard})
+is_hard :: proc(sim: Simulation, idx: int) -> bool {
+	return is_cell(sim, idx, {.Hard, .Semi_Hard})
 }
 
-is_solid :: proc(world: World, idx: int) -> bool {
-	return is_cell(world, idx, {.Hard, .Semi_Hard, .Powder})
+is_solid :: proc(sim: Simulation, idx: int) -> bool {
+	return is_cell(sim, idx, {.Hard, .Semi_Hard, .Powder})
 }
 
-is_liquid :: proc(world: World, idx: int) -> bool {
-	return is_cell(world, idx, {.Liquid})
+is_liquid :: proc(sim: Simulation, idx: int) -> bool {
+	return is_cell(sim, idx, {.Liquid})
 }
 
-is_empty :: proc(world: World, idx: int) -> bool {
-	return is_cell(world, idx, {.Empty})
+is_empty :: proc(sim: Simulation, idx: int) -> bool {
+	return is_cell(sim, idx, {.Empty})
 }
-
 random_side :: proc() -> int {
 	return int(rand.uint32() & 1) * 2 - 1
 }
@@ -289,9 +242,9 @@ tick_from_sec :: proc(sec: f32) -> u32 {
 	return u32(sec * 60)
 }
 
-is_cell :: proc(world: World, i: int, $types: Mat_Types) -> bool {
+is_cell :: proc(sim: Simulation, i: int, $types: Mat_Types) -> bool {
 	for type in types {
-		if cell_type_match(world, i, type) do return true
+		if cell_type_match(sim, i, type) do return true
 	}
 	return false
 

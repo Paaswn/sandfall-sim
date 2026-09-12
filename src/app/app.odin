@@ -68,14 +68,14 @@ init_app :: proc(app: ^App) {
 	}
 	// create g instance
 	g.init_game(&app.game)
-	init_ui(&app.ui ,app.game.world.config)
+	init_ui(&app.ui ,app.game.simulation.config)
 	init_control(&app.control)
 	// imgui_rl.init()
-	rl.InitWindow(sim.World_Width * sim.Scale, sim.World_Height * sim.Scale, "sandfall") // defer imgui_rl.shutdown()
+	rl.InitWindow(sim.WORLD_WIDTH * sim.SCALE, sim.WORLD_HEIGHT * sim.SCALE, "sandfall") // defer imgui_rl.shutdown()
 	rl.SetTargetFPS(120)
 	rl.HideCursor()
 	// create a texture buffer
-	image := rl.GenImageColor(sim.World_Width, sim.World_Height, rl.BLACK)
+	image := rl.GenImageColor(sim.WORLD_WIDTH, sim.WORLD_HEIGHT, rl.BLACK)
 	app.texture = rl.LoadTextureFromImage(image)
 	rl.UnloadImage(image)
 	// imgui.CreateContext()
@@ -85,7 +85,7 @@ init_app :: proc(app: ^App) {
 }
 
 run :: proc(a: ^App) {
-	TS := sim.Time_Scales
+	TS := sim.TIME_SCALES
 
 	// main loop
 
@@ -102,35 +102,35 @@ run :: proc(a: ^App) {
 			acc = update_game(&a.game, acc, now, prev)
 		}
 		prev = now
-		world := get_world(&a.game)
-		g.dispatch_event(world, &a.game.events)
+		simulation := get_simulation(&a.game)
+		g.dispatch_event(simulation, &a.game.events)
 		// imgui.ShowDemoWindow()
 		// imgui.Render()
 		// imgui_rl.render_draw_data(imgui.GetDrawData())
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
-		rd.render_game(a.texture, &a.game, world^)
-		draw_ui(a, world^)
+		rd.render_game(a.texture, &a.game, simulation^)
+		draw_ui(a, simulation^)
 		rl.EndDrawing()
 	}
 }
 
-get_world :: #force_inline proc(game: ^g.Game) -> ^sim.World {
+get_simulation :: #force_inline proc(game: ^g.Game) -> ^sim.Simulation {
 	if game.debugger.on && game.debugger.len > 0 && game.debugger.cursor != game.debugger.tail  {
 		return g.current_debug_frame(&game.debugger)
 	}
-	return &game.world
+	return &game.simulation
 }
 
-ts := sim.Time_Scales
+ts := sim.TIME_SCALES
 update_game_step :: #force_inline proc(game: ^g.Game) {
 	debugger := &game.debugger
 	if debugger.process_next_frame {
-		world := &game.world
-		clear(&world.movement)
-		world.tick += 1
-		sim.update_grid(world)
-		g.copy_to_frame(debugger, world)
+		simulation := &game.simulation
+		clear(&simulation.cell_traces)
+		simulation.tick += 1
+		sim.update_grid(simulation)
+		g.copy_to_frame(debugger, simulation)
 		g.forward_frame(debugger)
 		debugger.process_next_frame = false
 	}
@@ -138,22 +138,22 @@ update_game_step :: #force_inline proc(game: ^g.Game) {
 update_game :: #force_inline proc(game: ^g.Game, acc, now, prev: f64) -> f64  {
 	acc := acc
 	debugger := &game.debugger
-	world := &game.world
+	simulation := &game.simulation
 	dt := now - prev
 	acc += dt * ts[game.config.time_scale]
-	for acc >= sim.Dt {
-		clear(&world.movement)
-		sim.update_grid(world)
+	for acc >= sim.DT {
+		clear(&simulation.cell_traces)
+		sim.update_grid(simulation)
 		if debugger.on {
-			g.copy_to_frame(debugger, world)
+			g.copy_to_frame(debugger, simulation)
 		} else {
 			g.reset_debugger(debugger)
 		}
-		sim.update_particles(&world.particles)
+		// sim.update_particles(&simulation.particles)
 		if debugger.len < 1 {
-			world.tick += 1
+			simulation.tick += 1
 		}
-		acc -= sim.Dt
+		acc -= sim.DT
 	}
 	return acc
 }
@@ -167,7 +167,7 @@ delete_app :: proc(app: ^App) {
 		spall.buffer_destroy(&profiling.profiler, &profiling.prof_buffer)
 	}
 	rl.UnloadTexture(app.texture)
-	g.delete_game(&app.game)
+	g.destroy_game(&app.game)
 	delete_control(&app.control)
 	delete_ui(&app.ui)
 }

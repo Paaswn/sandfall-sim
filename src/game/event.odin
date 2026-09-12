@@ -12,7 +12,6 @@ Event_Queues :: struct {
 }
 
 Material_ID :: sim.Material_ID
-World :: sim.World
 Debug :: sim.Debug
 Spawn_Event :: struct {
     prev_pos: sim.World_Pos,
@@ -41,15 +40,15 @@ clear_queues :: proc(events: ^Event_Queues) {
 	clear(&events.spawn)
 }
 
-dispatch_event :: proc(world: ^World, events: ^Event_Queues) {
+dispatch_event :: proc(simulation: ^sim.Simulation, events: ^Event_Queues) {
 	for se in events.spawn {
-		brush_line(world, se)
+		brush_line(simulation, se)
 	}
 	for _, se in events.spawn_points {
-		sim.circle_brush_spawn(world, se.pos, se.r, se.material)
+		sim.circle_brush_spawn(simulation, se.pos, se.r, se.material)
 	}
 	if events.hot_reload {
-		hot_reload(world)
+		hot_reload(simulation)
 		events.hot_reload = false
 	}
 	clear_queues(events)
@@ -61,7 +60,7 @@ intersect :: proc(x0, y0, w0, h0, x1, y1, w1, h1: int) -> bool {
 	return true
 }
 
-brush_line :: proc(world: ^World, se: Spawn_Event) {
+brush_line :: proc(simulation: ^sim.Simulation, se: Spawn_Event) {
 	dx := abs(se.pos.x - se.prev_pos.x)
 	dy := -abs(se.pos.y - se.prev_pos.y)
 
@@ -77,7 +76,7 @@ brush_line :: proc(world: ^World, se: Spawn_Event) {
 	y := se.prev_pos.y
 
 	for {
-		sim.circle_brush_spawn(world, { x, y }, se.r, se.material)
+		sim.circle_brush_spawn(simulation, { x, y }, se.r, se.material)
 
 		if x == se.pos.x && y == se.pos.y {
 			break

@@ -5,31 +5,31 @@ import "core:encoding/json"
 import "core:os"
 
 // Runtime Config
-Time_Scales: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
-Config_Path :: "./config/world_config.json"
+TIME_SCALES: []f64 : []f64{0.01, 0.05, 0.1, 0.5, 0.75, 1}
+CONFIG_PATH :: "./config/world_config.json"
 // World Config
-World_Width :: 1920 / Scale
-World_Height :: 1080 / Scale
-World_Size :: World_Height * World_Width
+WORLD_WIDTH :: 1920 / SCALE
+WORLD_HEIGHT :: 1080 / SCALE
+WORLD_SIZE :: WORLD_HEIGHT * WORLD_WIDTH
 // Chunk
-Chunk_Size :: 32
-Width_In_Chunk :: (World_Width + Chunk_Size - 1) / Chunk_Size
-Height_In_Chunk :: (World_Height + Chunk_Size - 1) / Chunk_Size
-Max_Chunk_Idx :: Width_In_Chunk * Height_In_Chunk - 1
-Chunk_Amount :: Width_In_Chunk * Height_In_Chunk
+CHUNK_SIZE :: 32
+WIDTH_IN_CHUNK :: (WORLD_WIDTH + CHUNK_SIZE - 1) / CHUNK_SIZE
+HEIGHT_IN_CHUNK :: (WORLD_HEIGHT + CHUNK_SIZE - 1) / CHUNK_SIZE
+MAX_CHUNK_IDX :: WIDTH_IN_CHUNK * HEIGHT_IN_CHUNK - 1
+CHUNK_AMOUNT :: WIDTH_IN_CHUNK * HEIGHT_IN_CHUNK
 
-Material_Awake_Threshold :: 4
-Dt: f64 : 1.0 / 60.0
-Dt32: f32 : 1.0 / 60.0
+MATERIAL_AWAKE_THRESHOLD :: 4
+DT: f64 : 1.0 / 60.0
+DT32: f32 : 1.0 / 60.0
 
-Gravity: f32 : 980
-Scale :: 4
-Brush_Size :: 4
-Start_Time_Scale :: 5
-Start_Mat : Material_ID : 2
+GRAVITY: f32 : 980
+SCALE :: 4
+BRUSH_SIZE :: 4
+START_TIME_SCALE :: 5
+START_MATERIAL : Material_ID : 2
 // Global Material Constant
-Powder :: Material_Type_Config{1, 8.0, 4.0}
-Liquid :: Material_Type_Config{1.5, 10.0, 8.0}
+POWDER :: Material_Type_Config{1, 8.0, 4.0}
+LIQUID :: Material_Type_Config{1.5, 10.0, 8.0}
 
 load_world_config :: proc(path: string, sim_config: ^Simulation_Config) {
 	data, err := os.read_entire_file(path, context.allocator)

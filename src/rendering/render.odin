@@ -10,7 +10,7 @@ import "core:strings"
 import rl "vendor:raylib"
 import g "../game"
 
-build_pixel_buf :: proc(game: ^g.Game, world: sim.World) {
+build_pixel_buf :: proc(game: ^g.Game, simulation: sim.Simulation) {
 	when profiling.PROFILE {
 		spall.SCOPED_EVENT(&profiling.profiler, &profiling.prof_buffer, #procedure)
 	}
@@ -18,16 +18,16 @@ build_pixel_buf :: proc(game: ^g.Game, world: sim.World) {
 	buf := game.pixel_buf
 	switch debug_mode {
 	case .Velocity_Y:
-		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: sim.World) {
-			if sim.cell_type_match(world, idx, .Empty) do buf[idx] = rl.GRAY
-			else if sim.cell_type_match(world, idx, .Powder) do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Powder.Max_Vy)
-			else if sim.cell_type_match(world, idx, .Liquid) do buf[idx] = get_vel_color(1, world.vel_y[idx], sim.Liquid.Max_Vy)
+		build_pixel_index(simulation, buf, proc(idx: int, buf: []rl.Color, simulation: sim.Simulation) {
+			if sim.cell_type_match(simulation, idx, .Empty) do buf[idx] = rl.GRAY
+			else if sim.cell_type_match(simulation, idx, .Powder) do buf[idx] = get_vel_color(1, simulation.world[idx].vel.y, sim.POWDER.Max_Vy)
+			else if sim.cell_type_match(simulation, idx, .Liquid) do buf[idx] = get_vel_color(1, simulation.world[idx].vel.y, sim.LIQUID.Max_Vy)
 		})
 	case .Velocity_X:
-		build_pixel_index(world, buf, proc(idx: int, buf: []rl.Color, world: sim.World) {
-			if sim.cell_type_match(world, idx, .Empty) do buf[idx] = rl.GRAY
-			else if sim.cell_type_match(world, idx, .Powder) do buf[idx] = get_vel_color(int( sim.cell_at(world, idx).side ), world.vel_x[idx], sim.Powder.Max_Vx)
-			else if sim.cell_type_match(world, idx, .Liquid) do buf[idx] = get_vel_color(int( sim.cell_at(world, idx).side ), world.vel_x[idx], sim.Liquid.Max_Vx)
+		build_pixel_index(simulation, buf, proc(idx: int, buf: []rl.Color, simulation: sim.Simulation) {
+			if sim.cell_type_match(simulation, idx, .Empty) do buf[idx] = rl.GRAY
+			else if sim.cell_type_match(simulation, idx, .Powder) do buf[idx] = get_vel_color(int( sim.cell_at(simulation.world, idx).side ), simulation.world[idx].vel.x, sim.POWDER.Max_Vx)
+			else if sim.cell_type_match(simulation, idx, .Liquid) do buf[idx] = get_vel_color(int( sim.cell_at(simulation.world, idx).side ), simulation.world[idx].vel.x, sim.LIQUID.Max_Vx)
 		})
 
 	case .Off:
@@ -36,12 +36,12 @@ build_pixel_buf :: proc(game: ^g.Game, world: sim.World) {
 
 }
 build_pixel_index :: proc(
-	world: sim.World,
+	simulation: sim.Simulation,
 	buf: []rl.Color,
-	fill_color: proc(idx: int, buf: []rl.Color, world: sim.World),
+	fill_color: proc(idx: int, buf: []rl.Color, simulation: sim.Simulation),
 ) {
-	for _, idx in world.grid {
-		fill_color(idx, buf, world)
+	for _, idx in simulation.world {
+		fill_color(idx, buf, simulation)
 	}
 }
 
@@ -64,17 +64,17 @@ get_vel_color :: proc(side: int, vel: f32, max: f32) -> (color: rl.Color) {
 draw_particles :: proc(particles: [dynamic]sim.Particle) {
 	for &p in particles {
 		if p.life <= 0 do continue
-		rl.DrawRectangleV(p.pos, {sim.Scale, sim.Scale}, p.color)
+		rl.DrawRectangleV(p.pos, {sim.SCALE, sim.SCALE}, p.color)
 	}
 }
 
-render_game :: proc(texture: rl.Texture, game: ^g.Game, world: sim.World ) {
+render_game :: proc(texture: rl.Texture, game: ^g.Game, simulation: sim.Simulation ) {
 	
 	if game.config.debug_render != .Off {
-		build_pixel_buf(game, world)
+		build_pixel_buf(game, simulation)
 		rl.UpdateTexture(texture, raw_data(game.pixel_buf))
 	} else {
-		rl.UpdateTexture(texture, raw_data(world.frame))
+		rl.UpdateTexture(texture, raw_data(simulation.frame))
 	}
-	rl.DrawTextureEx(texture, {0, 0}, 0, sim.Scale, rl.WHITE)
+	rl.DrawTextureEx(texture, {0, 0}, 0, sim.SCALE, rl.WHITE)
 }

@@ -29,14 +29,14 @@ get_bound :: proc(chunk: ^Chunk) -> (bound: Bound ){
 	if bound_, ok := chunk.next_bound.?; ok {
 		bound = bound_
 	} else {
-		bound = Bound{Chunk_Size, Chunk_Size,  0,  0}
+		bound = Bound{CHUNK_SIZE, CHUNK_SIZE,  0,  0}
 	}
 	return
 }
 
 @(private = "file")
 resize_bound_world :: proc(bound: ^Bound, pos: World_Pos) {
-	lpos := Local_Pos(pos) % Chunk_Size
+	lpos := Local_Pos(pos) % CHUNK_SIZE
 	resize_bound_local(bound, lpos)
 }
 
@@ -45,8 +45,8 @@ Bound_Padding :: 5
 resize_bound_local :: proc(bound: ^Bound, pos: Local_Pos) {
 	bound.x = clamp(pos.x - Bound_Padding, 0, bound.x)
 	bound.y = clamp(pos.y - Bound_Padding, 0, bound.y)
-	bound.x2 = clamp(pos.x + Bound_Padding, bound.x2, Chunk_Size-1)
-	bound.y2 = clamp(pos.y + Bound_Padding, bound.y2, Chunk_Size-1)
+	bound.x2 = clamp(pos.x + Bound_Padding, bound.x2, CHUNK_SIZE-1)
+	bound.y2 = clamp(pos.y + Bound_Padding, bound.y2, CHUNK_SIZE-1)
 }
 
 to_chunk_index :: proc {
@@ -56,13 +56,13 @@ to_chunk_index :: proc {
 
 @(private = "file")
 chunk_index_from_chunk_pos :: proc(pos: Chunk_Pos) -> int {
-	return pos.y * Width_In_Chunk + pos.x
+	return pos.y * WIDTH_IN_CHUNK + pos.x
 }
 
 @(private = "file")
 chunk_index_from_world_pos :: proc(pos: World_Pos) -> int {
 	pos := to_chunk_pos(pos)
-	return pos.y * Width_In_Chunk + pos.x
+	return pos.y * WIDTH_IN_CHUNK + pos.x
 }
 
 @(require_results)
@@ -89,12 +89,12 @@ to_chunk_pos :: proc {
 
 @(private = "file")
 chunk_pos_from_chunk_index :: proc(cidx: int) -> Chunk_Pos {
-	return {cidx % Width_In_Chunk, cidx / Width_In_Chunk}
+	return {cidx % WIDTH_IN_CHUNK, cidx / WIDTH_IN_CHUNK}
 }
 
 @(private = "file")
 chunk_pos_from_world_pos :: proc(pos: World_Pos) -> Chunk_Pos {
-	return Chunk_Pos(pos / Chunk_Size)
+	return Chunk_Pos(pos / CHUNK_SIZE)
 }
 
 to_world_pos :: proc {
@@ -104,16 +104,16 @@ to_world_pos :: proc {
 
 @(private = "file")
 world_pos_from_index :: proc(widx: int) -> World_Pos {
-	return {widx % World_Width, widx / World_Width}
+	return {widx % WORLD_WIDTH, widx / WORLD_WIDTH}
 }
 
 @(private = "file")
 world_pos_from_chunk_local :: proc(cpos: Chunk_Pos, lpos: Local_Pos) -> World_Pos {
-	return World_Pos(Local_Pos(cpos * Chunk_Size) + lpos)
+	return World_Pos(Local_Pos(cpos * CHUNK_SIZE) + lpos)
 }
 
 is_chunk_outside :: proc(pos: Chunk_Pos) -> bool {
-	return pos.x < 0 || pos.x > Width_In_Chunk - 1 || pos.y < 0 || pos.y > Height_In_Chunk - 1
+	return pos.x < 0 || pos.x > WIDTH_IN_CHUNK - 1 || pos.y < 0 || pos.y > HEIGHT_IN_CHUNK - 1
 }
 
 activate_chunk :: proc {
@@ -128,25 +128,25 @@ put_chunk_in_queue_context :: proc(tick: u32, uctx: Update_Context) {
 	update_bound(uctx.chunk, uctx.lpos)
 }
 @(private = "file")
-put_chunk_in_queue_chunk :: proc(world: ^World, chunk: ^Chunk, pos: World_Pos) {
+put_chunk_in_queue_chunk :: proc(tick: u32, chunk: ^Chunk, pos: World_Pos) {
 	// chunk.to_update_tick = world.tick + 1
-	chunk.last_updated_tick = world.tick
+	chunk.last_updated_tick = tick
 	update_bound(chunk, pos)
 }
 
 @(private = "file")
-put_chunk_in_queue_idx :: proc(world: ^World, cpos: Chunk_Pos, wpos: World_Pos) {
+put_chunk_in_queue_idx :: proc(sim: Simulation, cpos: Chunk_Pos, wpos: World_Pos) {
     if is_chunk_outside(cpos) do return
-	chunk := get_chunk(world.chunks, cpos)
+	chunk := get_chunk(sim.chunks, cpos)
 	// chunk.to_update_tick = world.tick + 1
-	chunk.last_updated_tick = world.tick
+	chunk.last_updated_tick = sim.tick
 	update_bound(chunk, wpos)
 }
 
 // can be turned into a field
 chunk_active :: proc(chunk: ^Chunk, tick: u32) -> bool {
 	if chunk.last_updated_tick == 0 do return false // this acts like^ initially all chunk.active feild with false
-	return tick - chunk.last_updated_tick <= Material_Awake_Threshold // force chunk update if last_updated tick is less than 5 anyway
+	return tick - chunk.last_updated_tick <= MATERIAL_AWAKE_THRESHOLD // force chunk update if last_updated tick is less than 5 anyway
 }
 
 mark_dirty :: proc {
@@ -155,35 +155,35 @@ mark_dirty :: proc {
 }
 
 @(private="file")
-mark_chunk_dirty_context :: proc(world: ^World, uctx: Update_Context) {
-	activate_chunk(world.tick, uctx)
+mark_chunk_dirty_context :: proc(sim: Simulation, uctx: Update_Context) {
+	activate_chunk(sim.tick, uctx)
 	if uctx.lpos.y == 0 {
-		activate_chunk(world, uctx.cpos - {0, 1}, uctx.wpos - {0, 1})
+		activate_chunk(sim, uctx.cpos - {0, 1}, uctx.wpos - {0, 1})
 	}
 	if uctx.lpos.x == 0 {
-		activate_chunk(world, uctx.cpos - {1, 0}, uctx.wpos - {1, 0})
+		activate_chunk(sim, uctx.cpos - {1, 0}, uctx.wpos - {1, 0})
 	}
-	if uctx.lpos.x == Chunk_Size - 1 {
-		activate_chunk(world, uctx.cpos + {1, 0}, uctx.wpos + {1, 0})
+	if uctx.lpos.x == CHUNK_SIZE - 1 {
+		activate_chunk(sim, uctx.cpos + {1, 0}, uctx.wpos + {1, 0})
 	}
 }
 
 @(private="file")
-mark_chunk_dirty :: proc(world: ^World, wpos: World_Pos) {
+mark_chunk_dirty :: proc(sim: Simulation, wpos: World_Pos) {
 	cpos := to_chunk_pos(wpos)
-	activate_chunk(world, cpos, wpos)
+	activate_chunk(sim, cpos, wpos)
 	lpos := to_local_pos(wpos)
 	if lpos.y == 0 {
-		activate_chunk(world, cpos - {0, 1}, wpos - {0, 1})
+		activate_chunk(sim, cpos - {0, 1}, wpos - {0, 1})
 	}
 	if lpos.x == 0 {
-		activate_chunk(world, cpos - {1, 0}, wpos - {1, 0})
+		activate_chunk(sim, cpos - {1, 0}, wpos - {1, 0})
 	}
-	if lpos.x == Chunk_Size - 1 {
-		activate_chunk(world, cpos + {1, 0}, wpos + {1, 0})
+	if lpos.x == CHUNK_SIZE - 1 {
+		activate_chunk(sim, cpos + {1, 0}, wpos + {1, 0})
 	}
 }
 
 to_local_pos :: proc(wpos: World_Pos) -> Local_Pos {
-	return Local_Pos(wpos) % Chunk_Size
+	return Local_Pos(wpos) % CHUNK_SIZE
 }

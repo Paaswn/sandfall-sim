@@ -52,7 +52,6 @@ Material_Type_Config :: struct {
 	Max_Vx:    f32,
 }
 
-Simulation_Config :: []Material_Config
 Material_Config :: struct {
 	name:           string,
 	type:           Material_Type,

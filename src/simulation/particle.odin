@@ -18,8 +18,8 @@ update_particles :: proc(particles: ^[dynamic]Particle) {
 			unordered_remove_dynamic_array(particles, i)
 			continue
 		}
-		p.vel.y += sim.Gravity * sim.Dt32
-		p.pos += p.vel * sim.Dt32
+		p.vel.y += sim.GRAVITY * sim.DT32
+		p.pos += p.vel * sim.DT32
 	}
 }
 
