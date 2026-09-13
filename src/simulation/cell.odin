@@ -20,11 +20,11 @@ id_at :: proc(world: World, i: int) -> Material_ID {
 }
 
 get_cell_color :: proc(sim: Simulation, cell: Cell) -> Color {
-    return sim.config[cell.id].color
+    return sim.config[cell.id].color[cell.variance]
 }
 
-color_of :: proc(sim: Simulation, id: Material_ID) -> Color {
-    return sim.config[id].color
+color_of :: proc(sim: Simulation, id: Material_ID, v: Variance) -> Color {
+    return sim.config[id].color[v]
 }
 
 config_of :: proc(sim: Simulation, idx: int) -> Material_Config {
@@ -46,3 +46,4 @@ type_of_id :: proc(sim: Simulation, id: Material_ID) -> Material_Type {
 type_of_id_match :: proc(sim: Simulation, id: Material_ID, type: Material_Type) -> bool {
     return sim.config[id].type == type
 }
+

@@ -55,8 +55,7 @@ Material_Type_Config :: struct {
 Material_Config :: struct {
 	name:           string,
 	type:           Material_Type,
-	color:          Color,
-	variance:       u8,
+	color:          []Color,
 	down_acc:       f32,
 	slide_thresh:   f32,
 	side_thresh:    f32,
@@ -67,6 +66,7 @@ Material_Config :: struct {
 	slide_drag:     f32,
 	fall_drag:      f32,
 }
+Variance :: u8
 Velocity :: distinct fixed.Fixed(i16, 6)
 Material_ID :: distinct u16
 /*

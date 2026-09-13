@@ -2,19 +2,19 @@
   {
     "name": "Empty",
     "type": "Empty",
-    "color": [0, 0, 0, 255],
+    "color": [[ 0, 0, 0, 255 ]],
     "variance": 0
   },
   {
     "name": "Cement",
     "type": "Semi_Hard",
-    "color": [112, 112, 112, 255],
+    "color": [[ 112, 112, 112, 255 ]],
     "variance": 3
   },
   {
     "name": "Sand",
     "type": "Powder",
-    "color": [191, 179, 159, 255],
+    "color": [[ 191, 179, 159, 255 ], [ 191, 100, 170, 255]],
     "variance": 10,
     "down_acc": 30,
     "slide_thresh": 1.5,
@@ -29,7 +29,7 @@
   {
     "name": "Dirt",
     "type": "Powder",
-    "color": [77, 47, 31, 255],
+    "color": [[ 77, 47, 31, 255 ]],
     "variance": 5,
     "down_acc": 40,
     "slide_thresh": 2.0,
@@ -44,7 +44,7 @@
  {
     "name": "Water",
     "type": "Liquid",
-    "color": [52, 95, 224, 255],
+    "color": [[ 52, 95, 224, 255 ]],
     "variance": 0,
     "down_acc": 30,
     "slide_thresh": 0,
@@ -57,3 +57,4 @@
     "fall_drag": 0.1
   }
 ]
+
