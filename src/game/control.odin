@@ -1,8 +1,9 @@
-package app
+package game
 
 import g "../game"
 import sim "../simulation"
 import "core:fmt"
+import "core:math"
 import rl "vendor:raylib"
 
 Control :: struct {
@@ -75,6 +76,8 @@ Action :: enum {
 	Toggle_Pipette_Tool,
 	Use_Tool,
 	Show_Floating_Ui,
+	Zoom_In,
+	Zoom_Out,
 }
 
 MB :: rl.MouseButton
@@ -101,6 +104,8 @@ Keybinds :: [Action]Input {
 	.Debug_Material_Movement = {KK.FIVE, {.Ctrl}, false},
 	.Use_Tool                = {MB.LEFT, {.None}, true},
 	.Show_Floating_Ui        = {MB.RIGHT, {.None}, false},
+	.Zoom_In                 = {WS.Up, {.None}, false},
+	.Zoom_Out                = {WS.Down, {.None}, false},
 }
 
 input_handler :: proc(game: ^g.Game, control: ^Control, action_events: ^[dynamic]Action) {
@@ -164,11 +169,11 @@ switch_tool :: proc(gc: ^g.Game_Config, tool: g.Tool) {
 	tm.just_switched = 10
 }
 
-update_mouse_state :: proc(mouse: ^Mouse) {
-	mouse_pos := rl.GetMousePosition()
-	mouse.world = g.world_cursor(mouse_pos)
+update_mouse_state :: proc(camera: rl.Camera2D, mouse: ^Mouse) {
+    delta := rl.GetMouseDelta()
+    mouse.pos += delta / camera.zoom
+	mouse.world = g.world_cursor(mouse.pos)
 	mouse.wheel = get_wheel_state()
-	mouse.pos = mouse_pos
 }
 
 get_wheel_state :: proc() -> (wheel: Wheel_State) {
@@ -218,82 +223,6 @@ use_tool :: proc(game: ^g.Game, control: ^Control) {
 	}
 }
 
-update_input :: #force_inline proc(a: ^App) {
-	update_mouse_state(&a.control.cursor)
-	overlap :=
-		(rl.CheckCollisionPointRec(a.control.cursor.pos, a.ui.bound) && a.ui.show) ||
-		(rl.CheckCollisionPointRec(a.control.cursor.pos, a.ui.float_ui.bound) &&
-				a.ui.float_ui.show)
-	if overlap {
-		a.control.cursor.has_prev = false
-		a.control.enable_mouse = false
-	} else {
-		a.control.enable_mouse = true
-	}
-	input_handler(&a.game, &a.control, &a.control.actions)
-}
-
-consume_action :: #force_inline proc(app: ^App) {
-	game := &app.game
-	config := &game.config
-	debug_ui := &app.ui
-	control := &app.control
-	for e in control.actions {
-		switch e {
-
-		case .Show_Floating_Ui:
-			app.ui.float_ui.show = !app.ui.float_ui.show 
-			app.ui.float_ui.bound.x = control.cursor.pos.x
-			app.ui.float_ui.bound.y = control.cursor.pos.y
-		case .Use_Tool:
-			use_tool(game, control)
-		case .Debugger_Backward:
-			if game.debugger.on {
-				g.backward_frame(&game.debugger)
-			}
-		case .Debugger_Forward:
-			if game.debugger.on {
-				g.forward_frame(&game.debugger)
-			}
-		case .Debugger_Toggle:
-			game.debugger.on = !game.debugger.on
-		case .Debug_Material_Movement:
-			game.config.show_material_movement = !game.config.show_material_movement
-		case .Toggle_Brush_Tool:
-			switch_tool(&game.config, .Brush)
-		case .Toggle_Pipette_Tool:
-			switch_tool(&game.config, game.config.tool_man.prev_tool)
-		case .Open_Debug_Menu:
-			debug_ui.show = !debug_ui.show
-		case .Debug_Off:
-			config.debug_render = sim.Debug.Off
-		case .Debug_Velocity_Y:
-			config.debug_render = sim.Debug.Velocity_Y
-		case .Debug_Velocity_X:
-			config.debug_render = sim.Debug.Velocity_X
-		case .Debug_Chunk:
-			config.show_chunk_border = !config.show_chunk_border
-		case .Select_Empty:
-			config.current_mat = 0 
-		case .Increase_Tick:
-			config.time_scale += 1
-			if config.time_scale >= i32(len(sim.TIME_SCALES)) - 1 do config.time_scale = i32(len(sim.TIME_SCALES)) - 1
-		case .Decrease_Tick:
-			config.time_scale -= 1
-			if config.time_scale <= 0 do config.time_scale = 0
-		case .Increase_Brush_Size:
-			config.brush_size += 1
-		case .Decrease_Brush_Size:
-			config.brush_size -= 1
-			if config.brush_size <= 1 do config.brush_size = 1
-		case .Make_Spawn_Point:
-			create_spawn_point(control.cursor, &game.events, config)
-		case .Hot_Reload:
-			if !game.events.hot_reload do game.events.hot_reload = true
-		}
-	}
-	clear(&app.control.actions)
-}
 
 init_control :: proc(ctl: ^Control) {
 	ctl.actions = make([dynamic]Action, 0, 256)

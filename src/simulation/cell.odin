@@ -11,6 +11,13 @@ Cell :: struct {
     update_tick: u32,
     vel: [2]f32,
 }
+
+Empty :: Cell {
+    id = 0,
+    variance = 0,
+    side = 0,
+    vel = {0, 0}
+}
 cell_at :: proc(world: World, i: int) -> Cell {
     return world[i]
 }

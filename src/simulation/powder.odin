@@ -1,10 +1,72 @@
-// current bug: cell gain vx too easily, especially sand, causing a long vertical stream line when foundation cell move diagonally and the above cell gain just enough vx to slide next frame and so on
+
 package simulation
 
 import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
+powder_move :: proc(sim: ^Simulation, config: Material_Config, uctx: Update_Context) -> bool {
+    world := sim.world
+	now := uctx.now
+	x0 := uctx.wpos.x;
+	y0 := uctx.wpos.y;
+	side := int( world[now].side )
+	step_x := int(math.clamp(world[now].vel.x, 0, POWDER.Max_Vx)) * side
+	step_y := int(math.clamp(world[now].vel.y, 1, POWDER.Max_Vy))
+	x1, y1 := x0 + step_x, y0 + step_y
+	dx := abs(x1 - x0)
+	dy := -abs(y1 - y0)
+	grid := world
+	sx := 1
+	if x0 >= x1 do sx = -1
+    
+	sy := 1
+	if y0 >= y1 do sy = -1
+    
+	err := dx + dy
+    
+	to_x := x0
+	to_y := y0
+	to := now
+	if i, ok := world_index(x0+side, y0); !ok || is_hard(sim^, i) do return false
+	for {
+        	i := world_index(to_x, to_y) or_break
+            if i != now {
+               	if !is_empty(sim^, i) {
+                    world[now].vel.x = world[now].vel.y * config.impact_to_side
+                    break
+                }
+                to = i
+            }
+		if to_x == x1 && to_y == y1 {
+			break
+		}
+    
+		world[now].vel.x *= config.friction
+		e2 := 2 * err
+    
+		if e2 >= dy {
+			err += dy
+			to_x += sx
+		}
+    
+		if e2 <= dx {
+			err += dx
+			to_y += sy
+		}
+	}
+	moved := to != now
+	moved or_return
+	pos := to_world_pos(to)
+	// if rand.float32() < 0.1 {
+	//     world.side[now] *= -1
+	// }
+	world[to].vel = world[now].vel
+	move_cell(sim^, to, now)
+	activate_chunk(sim^, to_chunk_pos(pos), pos)
+	append(&sim.cell_traces, [4]int{x0, y0, pos.x, pos.y})
+	return true
+}
 // randomly move down-left or down-right, will try to transfer some velocity to its below cell on a success tick
 powder_move_diagonal :: proc(sim: ^Simulation, config: Material_Config, uctx: Update_Context) -> bool {
     world := sim.world

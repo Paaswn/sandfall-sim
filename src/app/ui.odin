@@ -1,10 +1,9 @@
 package app
 import g "../game"
+import "base:runtime"
+import "core:log"
 import sim "../simulation"
-import "core:container/priority_queue"
 import "core:fmt"
-import "core:reflect"
-import "core:sort"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -57,6 +56,7 @@ draw_debug_chunk :: proc(simulation: sim.Simulation) {
 			)
 		}
 	}
+	free_all(context.temp_allocator)
 }
 draw_ui :: proc(app: ^App, simulation: sim.Simulation) {
 	game := &app.game
@@ -115,7 +115,7 @@ draw_ui :: proc(app: ^App, simulation: sim.Simulation) {
 	draw_tool(game.config, app.control.cursor)
 
 }
-draw_tool :: proc(config: g.Game_Config, mouse: Mouse) {
+draw_tool :: proc(config: g.Game_Config, mouse: g.Mouse) {
 	switch config.tool_man.curr_tool {
 	case .Pipette:
 		draw_pipette(config, mouse)
@@ -124,7 +124,7 @@ draw_tool :: proc(config: g.Game_Config, mouse: Mouse) {
 	}
 }
 
-draw_pipette :: proc(config: g.Game_Config, mouse: Mouse) {
+draw_pipette :: proc(config: g.Game_Config, mouse: g.Mouse) {
 	rl.DrawRectangle(
 		i32(mouse.world.x * sim.SCALE),
 		i32(mouse.world.y * sim.SCALE),
@@ -134,7 +134,7 @@ draw_pipette :: proc(config: g.Game_Config, mouse: Mouse) {
 	)
 }
 
-draw_brush :: proc(config: g.Game_Config, mouse: Mouse) {
+draw_brush :: proc(config: g.Game_Config, mouse: g.Mouse) {
 
 	rl.DrawRectangle(
 		i32(mouse.world.x * sim.SCALE),
@@ -214,14 +214,17 @@ material_list_selector :: #force_inline proc(
 }
 
 init_ui :: proc(ui: ^Ui, config: sim.Simulation_Config) {
-	b := strings.builder_make()
-	defer strings.builder_destroy(&b)
-	for k, _ in config {
-		strings.write_string(&b, k.name)
-		strings.write_string(&b, ";")
-	}
-	cmaterial_choices, err := strings.clone_to_cstring(strings.to_string(b))
-	assert(err == nil)
+    names := make([dynamic]string, 0, len(config), context.temp_allocator)
+    for k in config {
+        append(&names, k.name)
+    }
+    matnames, err := strings.join(names[:], ";", context.temp_allocator)
+    if err != .None {
+        log.panic("Couldn't join material's name")
+    }
+    defer free_all(context.temp_allocator)
+	cmaterial_choices, nerr := strings.clone_to_cstring(matnames)
+	assert(nerr == nil)
 	ui.show = false
 	ui.material_selector = {cmaterial_choices, 0, -1}
 	ui.float_ui = {{0, 0, 200, 100}, false}

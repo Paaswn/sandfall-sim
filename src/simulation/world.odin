@@ -187,9 +187,9 @@ update_cell :: proc(sim: ^Simulation, uctx: Update_Context) -> (ok: bool) {
 	#partial switch conf.type {
 	case .Powder:
 		apply_gravity(sim.world, now, conf, POWDER)
-		if powder_move_down(sim, conf, uctx) do ok = true
+		if powder_move(sim, conf, uctx) do ok = true
 		if powder_move_diagonal(sim, conf, uctx) do ok = true
-		if powder_move_side(sim, conf, uctx) do ok = true
+		// if powder_move_side(sim, conf, uctx) do ok = true
 	case .Liquid:
 		apply_gravity(sim.world, now, conf, LIQUID)
 		if liquid_move(sim, conf, uctx) do ok = true

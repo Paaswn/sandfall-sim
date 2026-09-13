@@ -11,7 +11,8 @@ Game :: struct {
 	config:    Game_Config,
 	events:    Event_Queues,
 	pixel_buf: []rl.Color,
-	debugger: Debugger
+	debugger: Debugger,
+	camera: rl.Camera2D
 }
 
 // maybe add mouse click here
@@ -116,6 +117,7 @@ hot_reload :: proc(world: ^sim.Simulation) {
 }
 
 init_game :: proc(game: ^Game) {
+    init_camera(&game.camera)
     rng := rand.default_random_generator()
     init_debugger(&game.debugger, rng)
 	sim.init_sim(&game.simulation, rng)

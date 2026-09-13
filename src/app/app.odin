@@ -1,21 +1,19 @@
 package app
 
+import "core:math"
 import g "../game"
 import "../profiling"
 import rd "../rendering"
 import sim "../simulation"
-import "core:fmt"
 import "core:log"
 import "core:prof/spall"
-import "core:reflect"
-import "core:strings"
 import "core:sync"
 import rl "vendor:raylib"
 
 App :: struct {
 	game:    g.Game,
 	ui:      Ui,
-	control: Control,
+	control: g.Control,
 	texture: rl.Texture2D,
 	logger:  log.Logger,
 }
@@ -68,8 +66,8 @@ init_app :: proc(app: ^App) {
 	}
 	// create g instance
 	g.init_game(&app.game)
-	init_ui(&app.ui ,app.game.simulation.config)
-	init_control(&app.control)
+	init_ui(&app.ui, app.game.simulation.config)
+	g.init_control(&app.control)
 	// imgui_rl.init()
 	rl.InitWindow(sim.WORLD_WIDTH * sim.SCALE, sim.WORLD_HEIGHT * sim.SCALE, "sandfall") // defer imgui_rl.shutdown()
 	rl.SetTargetFPS(120)
@@ -108,15 +106,18 @@ run :: proc(a: ^App) {
 		// imgui.Render()
 		// imgui_rl.render_draw_data(imgui.GetDrawData())
 		rl.BeginDrawing()
+		// g.update_camera(a.control.cursor, &a.game.camera)
+		rl.BeginMode2D(a.game.camera)
 		rl.ClearBackground(rl.BLACK)
 		rd.render_game(a.texture, &a.game, simulation^)
 		draw_ui(a, simulation^)
+		rl.EndMode2D()
 		rl.EndDrawing()
 	}
 }
 
 get_simulation :: #force_inline proc(game: ^g.Game) -> ^sim.Simulation {
-	if game.debugger.on && game.debugger.len > 0 && game.debugger.cursor != game.debugger.tail  {
+	if game.debugger.on && game.debugger.len > 0 && game.debugger.cursor != game.debugger.tail {
 		return g.current_debug_frame(&game.debugger)
 	}
 	return &game.simulation
@@ -135,7 +136,7 @@ update_game_step :: #force_inline proc(game: ^g.Game) {
 		debugger.process_next_frame = false
 	}
 }
-update_game :: #force_inline proc(game: ^g.Game, acc, now, prev: f64) -> f64  {
+update_game :: #force_inline proc(game: ^g.Game, acc, now, prev: f64) -> f64 {
 	acc := acc
 	debugger := &game.debugger
 	simulation := &game.simulation
@@ -168,7 +169,94 @@ delete_app :: proc(app: ^App) {
 	}
 	rl.UnloadTexture(app.texture)
 	g.destroy_game(&app.game)
-	delete_control(&app.control)
+	g.delete_control(&app.control)
 	delete_ui(&app.ui)
 }
 
+
+update_input :: #force_inline proc(a: ^App) {
+	g.update_mouse_state(a.game.camera, &a.control.cursor)
+	overlap :=
+		(rl.CheckCollisionPointRec(a.control.cursor.pos, a.ui.bound) && a.ui.show) ||
+		(rl.CheckCollisionPointRec(a.control.cursor.pos, a.ui.float_ui.bound) &&
+				a.ui.float_ui.show)
+	if overlap {
+		a.control.cursor.has_prev = false
+		a.control.enable_mouse = false
+	} else {
+		a.control.enable_mouse = true
+	}
+	g.input_handler(&a.game, &a.control, &a.control.actions)
+}
+
+consume_action :: #force_inline proc(app: ^App) {
+	game := &app.game
+	config := &game.config
+	debug_ui := &app.ui
+	control := &app.control
+	for e in control.actions {
+		switch e {
+
+		case .Zoom_In:
+		    before := rl.GetScreenToWorld2D(control.cursor.pos, game.camera)
+			game.camera.zoom = math.clamp(0.1 + game.camera.zoom, 1, 10.0)
+            after := rl.GetScreenToWorld2D(control.cursor.pos, game.camera)
+            game.camera.target += before - after
+		case .Zoom_Out:
+            before := rl.GetScreenToWorld2D(control.cursor.pos, game.camera)
+			game.camera.zoom = math.clamp(game.camera.zoom - 0.1, 1, 10.0)
+			after := rl.GetScreenToWorld2D(control.cursor.pos, game.camera)
+            game.camera.target += before - after
+		case .Show_Floating_Ui:
+			app.ui.float_ui.show = !app.ui.float_ui.show
+			app.ui.float_ui.bound.x = control.cursor.pos.x
+			app.ui.float_ui.bound.y = control.cursor.pos.y
+		case .Use_Tool:
+			g.use_tool(game, control)
+		case .Debugger_Backward:
+			if game.debugger.on {
+				g.backward_frame(&game.debugger)
+			}
+		case .Debugger_Forward:
+			if game.debugger.on {
+				g.forward_frame(&game.debugger)
+			}
+		case .Debugger_Toggle:
+			game.debugger.on = !game.debugger.on
+		case .Debug_Material_Movement:
+			game.config.show_material_movement = !game.config.show_material_movement
+		case .Toggle_Brush_Tool:
+			g.switch_tool(&game.config, .Brush)
+		case .Toggle_Pipette_Tool:
+			g.switch_tool(&game.config, game.config.tool_man.prev_tool)
+		case .Open_Debug_Menu:
+			debug_ui.show = !debug_ui.show
+		case .Debug_Off:
+			config.debug_render = sim.Debug.Off
+		case .Debug_Velocity_Y:
+			config.debug_render = sim.Debug.Velocity_Y
+		case .Debug_Velocity_X:
+			config.debug_render = sim.Debug.Velocity_X
+		case .Debug_Chunk:
+			config.show_chunk_border = !config.show_chunk_border
+		case .Select_Empty:
+			config.current_mat = 0
+		case .Increase_Tick:
+			config.time_scale += 1
+			if config.time_scale >= i32(len(sim.TIME_SCALES)) - 1 do config.time_scale = i32(len(sim.TIME_SCALES)) - 1
+		case .Decrease_Tick:
+			config.time_scale -= 1
+			if config.time_scale <= 0 do config.time_scale = 0
+		case .Increase_Brush_Size:
+			config.brush_size += 1
+		case .Decrease_Brush_Size:
+			config.brush_size -= 1
+			if config.brush_size <= 1 do config.brush_size = 1
+		case .Make_Spawn_Point:
+			g.create_spawn_point(control.cursor, &game.events, config)
+		case .Hot_Reload:
+			if !game.events.hot_reload do game.events.hot_reload = true
+		}
+	}
+	clear(&app.control.actions)
+}
