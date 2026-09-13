@@ -77,10 +77,10 @@ spawn_material :: proc(sim: ^Simulation, id: Material_ID, pos: World_Pos) {
 	activate_chunk(sim^, to_chunk_pos(pos), pos)
 	cell.id = id
 	cell.update_tick = sim.tick
-	cell.variance = 1
+	cell.variance = random_variance(0, len(sim.config[id].color))
 	cell.vel = {0, 1}
 	if type_of_id_match(sim^, id, .Liquid){
-		cell.side = i8(random_side())
+		cell.side = i8(random_side(sim.rng))
 	}
 
 	sim.frame[i] = get_cell_color(sim^, cell^)
@@ -234,8 +234,8 @@ is_liquid :: proc(sim: Simulation, idx: int) -> bool {
 is_empty :: proc(sim: Simulation, idx: int) -> bool {
 	return is_cell(sim, idx, {.Empty})
 }
-random_side :: proc() -> int {
-	return int(rand.uint32() & 1) * 2 - 1
+random_side :: proc(rng: rand.Generator) -> int {
+	return int(rand.uint32(rng) & 1) * 2 - 1
 }
 
 tick_from_sec :: proc(sec: f32) -> u32 {
@@ -248,4 +248,8 @@ is_cell :: proc(sim: Simulation, i: int, $types: Mat_Types) -> bool {
 	}
 	return false
 
+}
+
+random_variance :: proc(lo, hi: uint) -> Variance {
+    return Variance( rand.uint_range(lo, hi))
 }

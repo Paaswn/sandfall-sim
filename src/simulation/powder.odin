@@ -12,7 +12,7 @@ powder_move_diagonal :: proc(sim: ^Simulation, config: Material_Config, uctx: Up
 	x := uctx.wpos.x;
 	y := uctx.wpos.y;
 	if world[now].vel.x < config.slide_thresh do return false
-	side := random_side()
+	side := random_side(sim.rng)
 	for try in 1 ..= 2 {
 		if try == 2 do side *= -1
 		next, inside := world_index(x + side, y + 1)
@@ -88,7 +88,7 @@ powder_move_down :: proc(sim: ^Simulation, config: Material_Config, uctx: Update
 		if !ok || is_solid(sim^, next) {
 			if world[now].vel.y >= config.impact_thresh {
 				world[now].vel.x = world[now].vel.y * config.impact_to_side
-				world[now].side = i8( random_side() )
+				world[now].side = i8( random_side(sim.rng) )
 			}
 			world[now].vel.y *= config.damp
 			break

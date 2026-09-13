@@ -20,8 +20,8 @@ liquid_move_down :: proc(sim: ^Simulation, config: Material_Config, uctx: Update
 				// this the only place where newly create cell will get its first vx value
 				// try picking the preferred side for this cell
 				world[now].vel.x = world[now].vel.y * config.impact_to_side
-				if world[now].side == 0 do world[now].side = i8( random_side()) 
-				else if random_side() > 0 do world[now].side *= -1
+				if world[now].side == 0 do world[now].side = i8( random_side(sim.rng)) 
+				else if random_side(sim.rng) > 0 do world[now].side *= -1
 			}
 			world[now].vel.y *= config.damp
 			break

@@ -1,5 +1,6 @@
 package game
 
+import "core:math/rand"
 import sim "../simulation"
 import "core:fmt"
 import "core:log"
@@ -37,9 +38,9 @@ Debugger :: struct {
 }
 
 
-init_debugger :: proc(debugger: ^Debugger) {
+init_debugger :: proc(debugger: ^Debugger, rng: rand.Generator) {
 	for &df in debugger.frames {
-		sim.init_sim(&df)
+		sim.init_sim(&df, rng)
 	}
 }
 
@@ -115,8 +116,9 @@ hot_reload :: proc(world: ^sim.Simulation) {
 }
 
 init_game :: proc(game: ^Game) {
-    init_debugger(&game.debugger)
-	sim.init_sim(&game.simulation)
+    rng := rand.default_random_generator()
+    init_debugger(&game.debugger, rng)
+	sim.init_sim(&game.simulation, rng)
 	init_game_config(game)
 	game.events = make_event_queues()
 	game.pixel_buf = make([]rl.Color, sim.WORLD_WIDTH * sim.WORLD_HEIGHT)
